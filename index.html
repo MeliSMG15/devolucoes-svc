@@ -229,7 +229,10 @@ tr:hover td { background: var(--surface2); }
   <div class="page" id="page-resumo">
     <div class="carga-sel none" id="sel-resumo" style="justify-content:space-between">
       <span><span class="cs-label">Resumo do dia</span> <b id="resumo-dia" class="mono"></b></span>
-      <button class="btn sm ghost" onclick="exportResumo()">⬇ Exportar CSV do dia</button>
+      <span style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm ghost" onclick="exportResumo()">⬇ Resumo por carreta</button>
+        <button class="btn sm" onclick="exportIdsDia()">⬇ Todos os IDs do dia</button>
+      </span>
     </div>
     <div id="resumo-body"></div>
   </div>
@@ -891,6 +894,34 @@ function exportResumo() {
   a.download = `resumo_devolucoes_${CUR_DIA}.csv`;
   a.click();
   toast('CSV do dia exportado');
+}
+function exportIdsDia() {
+  const { arr } = resumoDia();
+  if (!arr.length) return toast('Nada pra exportar neste dia');
+  // 1 linha por ID, agrupado por status (conferidos → faltantes → não esperados)
+  const conf = [], falt = [], nesp = [];
+  arr.forEach(c => {
+    const exp = c.expedidos || {}, rec = c.recebidos || {};
+    const ids = new Set([...Object.keys(exp), ...Object.keys(rec)]);
+    ids.forEach(id => {
+      const e = exp[id] !== undefined, r = rec[id] !== undefined;
+      const base = { dia: CUR_DIA, origem: c.origem, placa: c.placa, id };
+      if (e && r) conf.push({ ...base, status: 'CONFERIDO' });
+      else if (e) falt.push({ ...base, status: 'FALTANTE' });
+      else nesp.push({ ...base, status: 'NAO_ESPERADO' });
+    });
+  });
+  const sortId = (a,b) => a.id.localeCompare(b.id);
+  const linhas = [...conf.sort(sortId), ...falt.sort(sortId), ...nesp.sort(sortId)];
+  const rows = [['dia','origem','placa','id_devolucao','status']];
+  linhas.forEach(l => rows.push([l.dia, l.origem, l.placa, l.id, l.status]));
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ids_devolucoes_${CUR_DIA}.csv`;
+  a.click();
+  toast(`${linhas.length} IDs exportados (${conf.length} conf · ${falt.length} falt · ${nesp.length} não esp)`);
 }
 
 /* ============================================================
