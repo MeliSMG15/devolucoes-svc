@@ -6,7 +6,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Conferência de Devoluções · EMG23 → SMG15 · MELI</title>
+<title>Conferência de Devoluções · EMG → SMG15 · MELI</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='8' fill='%23FFE600'/%3E%3Cpath d='M22 8 L12 8 A6 6 0 0 0 6 14 L6 26 A6 6 0 0 0 12 32 L28 32 A6 6 0 0 0 34 26 L34 20' stroke='%232D3277' stroke-width='3.2' stroke-linecap='round' fill='none'/%3E%3Cpath d='M28 6 L34 12 L28 18' stroke='%232D3277' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -32,7 +32,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', 
 .tab { padding: 10px 16px; border: none; background: transparent; color: var(--text2); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 8px 8px 0 0; border-bottom: 3px solid transparent; white-space: nowrap; }
 .tab.active { color: var(--text); border-bottom-color: var(--meli); background: var(--surface2); }
 .tab:hover:not(.active) { color: var(--text); }
-.tab .tb { font-family: 'DM Mono', monospace; font-size: 11px; margin-left: 6px; opacity: .7; }
+.tab.sep { margin-left: 8px; border-left: 1px solid var(--border); padding-left: 16px; }
 .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 80px; }
 .page { display: none; } .page.active { display: block; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 10px rgba(45,50,119,.05); }
@@ -56,13 +56,15 @@ th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--bor
 th { color: var(--text3); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
 tr:hover td { background: var(--surface2); }
 .mono { font-family: 'DM Mono', monospace; }
+.plate { font-family: 'DM Mono', monospace; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
 .tag { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; font-family: 'DM Mono', monospace; white-space: nowrap; }
 .tag.ok { background: rgba(0,166,80,.14); color: #00854f; }
 .tag.miss { background: rgba(230,57,70,.13); color: #c0283a; }
 .tag.extra { background: rgba(245,166,35,.18); color: #a85d00; }
 .tag.open { background: rgba(52,131,250,.13); color: #1f5fc4; }
-.tag.exp { background: var(--surface3); color: var(--text2); }
+.tag.exp { background: rgba(245,166,35,.18); color: #a85d00; }
 .tag.done { background: rgba(0,166,80,.14); color: #00854f; }
+.tag.org { background: var(--meli-blue); color: #fff; }
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(120px,1fr)); gap: 12px; }
 .stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
 .stat.big .n { font-size: 34px; }
@@ -82,13 +84,12 @@ tr:hover td { background: var(--surface2); }
 .carga-sel { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 16px; border-radius: 12px; background: var(--surface2); border: 1px solid var(--border); margin-bottom: 16px; }
 .carga-sel.none { border-color: var(--yellow); background: rgba(245,166,35,.1); }
 .carga-sel .cs-label { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
-.carga-sel select { min-width: 220px; font-weight: 600; }
+.carga-sel select { min-width: 200px; font-weight: 600; }
+.carga-sel .spacer { flex: 1; }
 .prog { height: 10px; background: var(--surface2); border-radius: 6px; overflow: hidden; border: 1px solid var(--border); margin-top: 6px; }
 .prog > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); border-radius: 6px; transition: width .3s; }
 .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--meli-blue); color: #fff; padding: 12px 20px; border-radius: 10px; font-size: 14px; z-index: 999; box-shadow: 0 8px 30px rgba(45,50,119,.25); }
-.route-note { font-size: 12px; color: var(--text3); margin-top: 4px; }
-.big-count { font-family: 'DM Mono', monospace; font-size: 40px; font-weight: 700; }
-audio { display: none; }
+.route-note { font-size: 12px; color: var(--text3); }
 </style>
 </head>
 <body>
@@ -100,7 +101,7 @@ audio { display: none; }
     </div>
     <div>
       <div class="brand-name">Conferência de Devoluções</div>
-      <div class="brand-sub">EMG23 → SMG15</div>
+      <div class="brand-sub">EMG23 · EMG37 · EMG26 → SMG15</div>
     </div>
   </div>
   <div class="topbar-right">
@@ -111,30 +112,45 @@ audio { display: none; }
 </div>
 
 <div class="tabs">
-  <button class="tab active" data-page="expedir" onclick="goto('expedir')">📤 EMG23 · Expedir</button>
-  <button class="tab" data-page="receber" onclick="goto('receber')">📥 SMG15 · Receber</button>
-  <button class="tab" data-page="conferencia" onclick="goto('conferencia')">✅ Conferência</button>
-  <button class="tab" data-page="cargas" onclick="goto('cargas')">📦 Cargas</button>
+  <button class="tab active" data-key="EMG23" onclick="goto('EMG23')">📤 EMG23</button>
+  <button class="tab" data-key="EMG37" onclick="goto('EMG37')">📤 EMG37</button>
+  <button class="tab" data-key="EMG26" onclick="goto('EMG26')">📤 EMG26</button>
+  <button class="tab sep" data-key="receber" onclick="goto('receber')">📥 SMG15 · Receber</button>
+  <button class="tab" data-key="conferencia" onclick="goto('conferencia')">✅ Conferência</button>
+  <button class="tab" data-key="cargas" onclick="goto('cargas')">🚚 Cargas</button>
 </div>
 
 <div class="wrap">
 
-  <!-- ====================== EMG23 EXPEDIR ====================== -->
+  <!-- ====================== EXPEDIR (EMG23/37/26) ====================== -->
   <div class="page active" id="page-expedir">
+    <div class="card">
+      <h2 id="exp-title">Expedição · EMG23</h2>
+      <p class="hint">Abra a carreta pela <b>placa</b>, bipe os <b>IDs de devolução</b> (número puro) e clique em <b>Finalizar bipagem</b> — a carga fecha e fica disponível pro SMG15 receber.</p>
+      <div class="row">
+        <label class="fld">Placa da carreta
+          <input id="nova-placa" class="plate" placeholder="ABC1D23" style="min-width:200px"
+                 oninput="this.value=this.value.toUpperCase()"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();abrirCarga()}">
+        </label>
+        <button class="btn green" onclick="abrirCarga()">Abrir carga</button>
+      </div>
+    </div>
+
     <div class="carga-sel none" id="sel-expedir">
-      <span class="cs-label">Carga</span>
+      <span class="cs-label">Carga aberta</span>
       <select id="carga-expedir" onchange="setCargaExpedir(this.value)"></select>
-      <button class="btn sm ghost" onclick="goto('cargas')">+ Nova carga</button>
       <span id="carga-expedir-info" class="route-note"></span>
+      <span class="spacer"></span>
+      <button class="btn red" id="btn-finalizar" onclick="finalizarBipagem()" disabled>✓ Finalizar bipagem</button>
     </div>
 
     <div class="card">
-      <h2>Bipar IDs de devolução — EMG23</h2>
-      <p class="hint">Selecione (ou crie) a carga, bipe cada <b>ID de devolução</b> (número puro). Isso monta a <b>lista esperada</b> que o SMG15 vai conferir no recebimento.</p>
+      <h2>Bipar IDs de devolução</h2>
       <div class="scan-box">
         <input class="scan-input" id="scan-exp" placeholder="Bipe o ID de devolução…" autocomplete="off" disabled
                onkeydown="if(event.key==='Enter'){event.preventDefault();scanExpedir()}">
-        <div class="scan-feedback fb-idle" id="fb-exp">Selecione uma carga para começar</div>
+        <div class="scan-feedback fb-idle" id="fb-exp">Abra ou selecione uma carga para começar</div>
       </div>
       <div class="stat-grid" style="margin-top:8px">
         <div class="stat big"><div class="n" id="exp-total">0</div><div class="l">Bipados nesta carga</div></div>
@@ -153,14 +169,14 @@ audio { display: none; }
 
     <div class="card">
       <h2>Receber e conferir — SMG15</h2>
-      <p class="hint">Bipe cada pacote recebido. O app confere na hora contra o que o EMG23 expediu: <span class="tag ok">CONFERIDO</span> esperado e ok · <span class="tag extra">NÃO ESPERADO</span> chegou sem ter sido bipado no EMG23.</p>
+      <p class="hint">Selecione a carreta que chegou (só aparecem as <b>finalizadas</b> na origem). Bipe cada pacote recebido: <span class="tag ok">CONFERIDO</span> esperado e ok · <span class="tag extra">NÃO ESPERADO</span> chegou sem ter sido bipado na origem.</p>
       <div class="scan-box">
         <input class="scan-input" id="scan-rec" placeholder="Bipe o pacote recebido…" autocomplete="off" disabled
                onkeydown="if(event.key==='Enter'){event.preventDefault();scanReceber()}">
         <div class="scan-feedback fb-idle" id="fb-rec">Selecione uma carga para começar</div>
       </div>
       <div class="stat-grid" style="margin-top:8px">
-        <div class="stat"><div class="n" id="rec-exp">0</div><div class="l">Esperados (EMG23)</div></div>
+        <div class="stat"><div class="n" id="rec-exp">0</div><div class="l">Esperados</div></div>
         <div class="stat ok"><div class="n" id="rec-ok">0</div><div class="l">Conferidos</div></div>
         <div class="stat miss"><div class="n" id="rec-miss">0</div><div class="l">Faltando</div></div>
         <div class="stat extra"><div class="n" id="rec-extra">0</div><div class="l">Não esperados</div></div>
@@ -183,17 +199,8 @@ audio { display: none; }
   <!-- ====================== CARGAS ====================== -->
   <div class="page" id="page-cargas">
     <div class="card">
-      <h2>Nova carga</h2>
-      <p class="hint">Uma carga = uma remessa de devolução (ex: caminhão, rota ou data). O EMG23 bipa dentro dela e o SMG15 concilia essa mesma carga.</p>
-      <div class="row">
-        <label class="fld">Nome / identificação
-          <input id="nova-carga-nome" placeholder="ex: Caminhão 08:00 · Rota R7" style="min-width:280px">
-        </label>
-        <button class="btn green" onclick="criarCarga()">Criar carga</button>
-      </div>
-    </div>
-    <div class="card">
       <h2>Cargas</h2>
+      <p class="hint">Uma carga = uma carreta (placa) de uma origem. Abra pela aba da origem (EMG23/37/26); aqui você acompanha, fecha ou exclui.</p>
       <div id="cargas-list"></div>
     </div>
   </div>
@@ -218,6 +225,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const ROOT = 'devolucoes';
+const ORIGENS = ['EMG23','EMG37','EMG26'];
 firebase.auth().signInAnonymously().catch(e => {
   console.warn('[auth] anon falhou:', e.code, e.message);
   setTimeout(() => toast('⚠️ Login anônimo falhou (' + (e.code||'') + ')'), 1200);
@@ -226,12 +234,14 @@ firebase.auth().onAuthStateChanged(u => console.log('[auth]', u ? 'logado '+u.ui
 
 /* ============================================================
    ESTADO + CACHE / FILA OFFLINE
-   cargas[id] = { nome, status, criada_em, criada_turno,
-                  expedidos:{[pkg]:ts}, recebidos:{[pkg]:ts} }
+   cargas[id] = { placa, origem, status(aberta|finalizada|fechada),
+                  criada_em, criada_turno, expedidos:{[pkg]:ts}, recebidos:{[pkg]:ts} }
    ============================================================ */
 let STATE = { cargas: {} };
 let QUEUE = JSON.parse(localStorage.getItem('dv_queue') || '[]');
-let SEL = { expedir: localStorage.getItem('dv_sel_exp') || '', receber: localStorage.getItem('dv_sel_rec') || '' };
+let CUR_ORIGIN = 'EMG23';
+let SEL = { expedir: {}, receber: localStorage.getItem('dv_sel_rec') || '' };
+try { SEL.expedir = JSON.parse(localStorage.getItem('dv_sel_exp') || '{}'); } catch(e){ SEL.expedir = {}; }
 const TURNO = turnoAtual();
 
 function turnoAtual() {
@@ -290,7 +300,9 @@ function toast(msg) {
   host.appendChild(t); setTimeout(() => t.remove(), 2600);
 }
 function normId(s) { return String(s||'').trim().replace(/\s+/g,''); }
+function normPlaca(s) { return String(s||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,''); }
 function fbKey(s) { return String(s).replace(/[.#$/\[\]]/g,'_'); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 function beep(ok) {
   try {
     const ctx = new (window.AudioContext||window.webkitAudioContext)();
@@ -307,7 +319,7 @@ function cargasArr() {
     .sort((a,b) => (b.criada_em||0) - (a.criada_em||0));
 }
 function statusTag(s) {
-  const map = { aberta:['open','ABERTA'], expedida:['exp','EXPEDIDA'], fechada:['done','FECHADA'] };
+  const map = { aberta:['open','ABERTA'], finalizada:['exp','FINALIZADA'], fechada:['done','FECHADA'] };
   const [cls,txt] = map[s] || ['open', (s||'').toUpperCase()];
   return `<span class="tag ${cls}">${txt}</span>`;
 }
@@ -315,142 +327,147 @@ function counts(c) {
   const exp = c.expedidos || {}, rec = c.recebidos || {};
   const ek = Object.keys(exp), rk = Object.keys(rec);
   let ok = 0; rk.forEach(k => { if (exp[k] !== undefined) ok++; });
-  const miss = ek.length - ok;
-  const extra = rk.length - ok;
-  return { exp: ek.length, rec: rk.length, ok, miss, extra };
+  return { exp: ek.length, rec: rk.length, ok, miss: ek.length - ok, extra: rk.length - ok };
 }
-
-/* ============================================================
-   NAVEGAÇÃO
-   ============================================================ */
-function goto(page) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('page-'+page).classList.add('active');
-  document.querySelector(`.tab[data-page="${page}"]`).classList.add('active');
-  if (page === 'expedir') setTimeout(() => { const i=document.getElementById('scan-exp'); if(!i.disabled) i.focus(); }, 50);
-  if (page === 'receber') setTimeout(() => { const i=document.getElementById('scan-rec'); if(!i.disabled) i.focus(); }, 50);
-  if (page === 'conferencia') renderConferencia();
-  if (page === 'cargas') renderCargas();
-}
-
-/* ============================================================
-   CARGAS
-   ============================================================ */
-function criarCarga() {
-  const nome = document.getElementById('nova-carga-nome').value.trim();
-  if (!nome) return toast('Dê um nome para a carga');
-  const id = 'C' + Date.now().toString(36);
-  writeData('cargas/'+id, { nome, status: 'aberta', criada_em: Date.now(), criada_turno: TURNO, expedidos: {}, recebidos: {} });
-  document.getElementById('nova-carga-nome').value = '';
-  toast('Carga criada: ' + nome);
-  SEL.expedir = id; localStorage.setItem('dv_sel_exp', id);
-  renderAll();
-}
-function setStatus(id, status) { writeData('cargas/'+id+'/status', status); toast('Carga → ' + status.toUpperCase()); }
-function delCarga(id) {
-  const c = STATE.cargas[id]; if (!c) return;
-  if (!confirm(`Excluir a carga "${c.nome}"? Isso apaga todos os bipes dela.`)) return;
-  writeData('cargas/'+id, null);
-  if (SEL.expedir===id) SEL.expedir=''; if (SEL.receber===id) SEL.receber='';
-  toast('Carga excluída'); renderAll();
-}
-function renderCargas() {
-  const host = document.getElementById('cargas-list');
-  const arr = cargasArr();
-  if (!arr.length) { host.innerHTML = '<div class="empty">Nenhuma carga ainda. Crie a primeira acima.</div>'; return; }
-  host.innerHTML = `<table><thead><tr>
-    <th>Carga</th><th>Status</th><th>Expedidos</th><th>Recebidos</th><th>Conf.</th><th>Falta</th><th>Não esp.</th><th></th>
-  </tr></thead><tbody>` + arr.map(c => {
-    const k = counts(c);
-    return `<tr>
-      <td><b>${esc(c.nome)}</b><div class="route-note mono">${c.criada_turno||''}</div></td>
-      <td>${statusTag(c.status)}</td>
-      <td class="mono">${k.exp}</td>
-      <td class="mono">${k.rec}</td>
-      <td class="mono" style="color:var(--green)">${k.ok}</td>
-      <td class="mono" style="color:var(--red)">${k.miss}</td>
-      <td class="mono" style="color:#a85d00">${k.extra}</td>
-      <td style="text-align:right;white-space:nowrap">
-        ${c.status!=='expedida'?`<button class="btn sm ghost" onclick="setStatus('${c.id}','expedida')">Marcar expedida</button> `:''}
-        ${c.status!=='fechada'?`<button class="btn sm ghost" onclick="setStatus('${c.id}','fechada')">Fechar</button> `:'<button class="btn sm ghost" onclick="setStatus(\''+c.id+'\',\'aberta\')">Reabrir</button> '}
-        <button class="btn sm red" onclick="delCarga('${c.id}')">Excluir</button>
-      </td>
-    </tr>`;
-  }).join('') + '</tbody></table>';
-}
-
-/* ============================================================
-   SELETORES DE CARGA
-   ============================================================ */
-function fillCargaSelect(elId, selected, filterFn) {
-  const el = document.getElementById(elId);
-  const arr = cargasArr().filter(filterFn || (()=>true));
-  el.innerHTML = '<option value="">— selecione —</option>' +
-    arr.map(c => { const k=counts(c); return `<option value="${c.id}" ${c.id===selected?'selected':''}>${esc(c.nome)} · ${k.exp} exp${c.status==='fechada'?' · fechada':''}</option>`; }).join('');
-}
-function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
-
-function setCargaExpedir(id) {
-  SEL.expedir = id; localStorage.setItem('dv_sel_exp', id);
-  const inp = document.getElementById('scan-exp'), sel = document.getElementById('sel-expedir');
-  const c = STATE.cargas[id];
-  inp.disabled = !id; sel.classList.toggle('none', !id);
-  document.getElementById('carga-expedir-info').textContent = c ? statusTxt(c) : '';
-  if (id) { inp.focus(); setFb('fb-exp','fb-idle','Pronto — bipe os IDs'); } else setFb('fb-exp','fb-idle','Selecione uma carga para começar');
-  renderExpedir();
-}
-function setCargaReceber(id) {
-  SEL.receber = id; localStorage.setItem('dv_sel_rec', id);
-  const inp = document.getElementById('scan-rec'), sel = document.getElementById('sel-receber');
-  const c = STATE.cargas[id];
-  inp.disabled = !id; sel.classList.toggle('none', !id);
-  document.getElementById('carga-receber-info').textContent = c ? statusTxt(c) : '';
-  if (id) { inp.focus(); setFb('fb-rec','fb-idle','Pronto — bipe os pacotes'); } else setFb('fb-rec','fb-idle','Selecione uma carga para começar');
-  renderReceber();
-}
-function statusTxt(c){ const k=counts(c); return `${c.status.toUpperCase()} · ${k.exp} esperados`; }
 function setFb(id, cls, txt, sub) {
   const el = document.getElementById(id);
   el.className = 'scan-feedback ' + cls;
   el.innerHTML = txt + (sub?`<div class="scan-sub">${sub}</div>`:'');
 }
 
+/* seleção de carga por origem (expedir) */
+function selExp(){ return SEL.expedir[CUR_ORIGIN] || ''; }
+function setSelExp(id){ SEL.expedir[CUR_ORIGIN] = id; localStorage.setItem('dv_sel_exp', JSON.stringify(SEL.expedir)); }
+
 /* ============================================================
-   SCAN — EMG23 (expedir)
+   NAVEGAÇÃO (origens compartilham a página 'expedir')
    ============================================================ */
+function goto(key) {
+  const page = ORIGENS.includes(key) ? 'expedir' : key;
+  if (ORIGENS.includes(key)) CUR_ORIGIN = key;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelector(`.tab[data-key="${key}"]`).classList.add('active');
+  if (page === 'expedir') initExpedir();
+  if (page === 'receber') initReceber();
+  if (page === 'conferencia') renderConferencia();
+  if (page === 'cargas') renderCargas();
+}
+
+/* ============================================================
+   SELETOR DE CARGA (montar <option>)
+   ============================================================ */
+function fillCargaSelect(elId, selected, filterFn, labelFn) {
+  const el = document.getElementById(elId);
+  const arr = cargasArr().filter(filterFn || (()=>true));
+  el.innerHTML = '<option value="">— selecione —</option>' +
+    arr.map(c => `<option value="${c.id}" ${c.id===selected?'selected':''}>${esc(labelFn?labelFn(c):c.placa)}</option>`).join('');
+}
+
+/* ============================================================
+   EXPEDIÇÃO (EMG23 / EMG37 / EMG26)
+   ============================================================ */
+function initExpedir() {
+  document.getElementById('exp-title').textContent = 'Expedição · ' + CUR_ORIGIN;
+  fillCargaSelect('carga-expedir', selExp(),
+    c => c.origem === CUR_ORIGIN && c.status === 'aberta',
+    c => `${c.placa} · ${counts(c).exp} bipados`);
+  applyExpedirSel();
+  setTimeout(() => { const i = document.getElementById('scan-exp'); if (!i.disabled) i.focus(); }, 50);
+}
+function abrirCarga() {
+  const placa = normPlaca(document.getElementById('nova-placa').value);
+  if (!placa) return toast('Digite a placa da carreta');
+  // reaproveita carga aberta com a mesma placa/origem
+  const existente = cargasArr().find(c => c.origem === CUR_ORIGIN && c.status === 'aberta' && c.placa === placa);
+  if (existente) {
+    setSelExp(existente.id);
+    document.getElementById('nova-placa').value = '';
+    toast('Carga já aberta: ' + placa);
+    initExpedir(); return;
+  }
+  const id = 'C' + Date.now().toString(36);
+  writeData('cargas/'+id, { placa, origem: CUR_ORIGIN, status: 'aberta', criada_em: Date.now(), criada_turno: TURNO, expedidos: {}, recebidos: {} });
+  setSelExp(id);
+  document.getElementById('nova-placa').value = '';
+  toast(`Carga ${placa} aberta · ${CUR_ORIGIN}`);
+  initExpedir();
+}
+function setCargaExpedir(id) { setSelExp(id); applyExpedirSel(); const i=document.getElementById('scan-exp'); if(!i.disabled) i.focus(); }
+function applyExpedirSel() {
+  const id = selExp(), c = STATE.cargas[id];
+  const valid = !!(c && c.status === 'aberta');
+  document.getElementById('carga-expedir').value = valid ? id : '';
+  document.getElementById('scan-exp').disabled = !valid;
+  document.getElementById('btn-finalizar').disabled = !valid;
+  document.getElementById('sel-expedir').classList.toggle('none', !valid);
+  document.getElementById('carga-expedir-info').innerHTML = valid ? `<span class="plate">${esc(c.placa)}</span> · ${counts(c).exp} bipados` : '';
+  if (!valid) { setSelExp(''); setFb('fb-exp','fb-idle','Abra ou selecione uma carga para começar'); }
+  else setFb('fb-exp','fb-idle','Pronto — bipe os IDs');
+  renderExpedir();
+}
 function scanExpedir() {
   const inp = document.getElementById('scan-exp');
   const id = normId(inp.value); inp.value=''; inp.focus();
   if (!id) return;
-  const cid = SEL.expedir, c = STATE.cargas[cid];
-  if (!c) { setFb('fb-exp','fb-err','Selecione uma carga'); return; }
-  const exp = c.expedidos || {};
+  const cid = selExp(), c = STATE.cargas[cid];
+  if (!c || c.status !== 'aberta') { setFb('fb-exp','fb-err','Carga não está aberta'); return; }
   const key = fbKey(id);
-  if (exp[key] !== undefined) {
+  if ((c.expedidos||{})[key] !== undefined) {
     beep(false); setFb('fb-exp','fb-warn','⚠️ JÁ BIPADO', id + ' já está nesta carga');
     logScan('log-exp', id, 'dup'); return;
   }
   writeData(`cargas/${cid}/expedidos/${key}`, Date.now());
   beep(true); setFb('fb-exp','fb-ok','✅ ADICIONADO', id);
   logScan('log-exp', id, 'add');
-  renderExpedir();
+  applyExpedirSel();
+}
+function finalizarBipagem() {
+  const cid = selExp(), c = STATE.cargas[cid];
+  if (!c) return;
+  const n = counts(c).exp;
+  if (!confirm(`Finalizar bipagem da carga ${c.placa} (${CUR_ORIGIN})?\n${n} ID(s) bipado(s).\nDepois de finalizada ela fica disponível pro SMG15 receber.`)) return;
+  writeData('cargas/'+cid+'/status', 'finalizada');
+  setSelExp('');
+  toast(`✅ ${c.placa} finalizada — liberada pro SMG15`);
+  document.getElementById('log-exp').innerHTML = '';
+  LOGS['log-exp'] = [];
+  initExpedir();
 }
 function renderExpedir() {
-  const c = STATE.cargas[SEL.expedir];
-  const k = c ? counts(c) : {exp:0};
-  document.getElementById('exp-total').textContent = k.exp;
+  const c = STATE.cargas[selExp()];
+  document.getElementById('exp-total').textContent = c ? counts(c).exp : 0;
 }
 
 /* ============================================================
-   SCAN — SMG15 (receber / conferir)
+   SMG15 RECEBER
    ============================================================ */
+function initReceber() {
+  fillCargaSelect('carga-receber', SEL.receber,
+    c => c.status === 'finalizada',
+    c => `${c.origem} · ${c.placa} · ${counts(c).exp} esperados`);
+  applyReceberSel();
+  setTimeout(() => { const i = document.getElementById('scan-rec'); if (!i.disabled) i.focus(); }, 50);
+}
+function setCargaReceber(id) { SEL.receber = id; localStorage.setItem('dv_sel_rec', id); applyReceberSel(); const i=document.getElementById('scan-rec'); if(!i.disabled) i.focus(); }
+function applyReceberSel() {
+  const id = SEL.receber, c = STATE.cargas[id];
+  const valid = !!(c && c.status === 'finalizada');
+  document.getElementById('carga-receber').value = valid ? id : '';
+  document.getElementById('scan-rec').disabled = !valid;
+  document.getElementById('sel-receber').classList.toggle('none', !valid);
+  document.getElementById('carga-receber-info').innerHTML = valid ? `<span class="tag org">${esc(c.origem)}</span> <span class="plate">${esc(c.placa)}</span>` : '';
+  if (!valid) { SEL.receber=''; localStorage.setItem('dv_sel_rec',''); setFb('fb-rec','fb-idle','Selecione uma carga para começar'); }
+  else setFb('fb-rec','fb-idle','Pronto — bipe os pacotes');
+  renderReceber();
+}
 function scanReceber() {
   const inp = document.getElementById('scan-rec');
   const id = normId(inp.value); inp.value=''; inp.focus();
   if (!id) return;
   const cid = SEL.receber, c = STATE.cargas[cid];
-  if (!c) { setFb('fb-rec','fb-err','Selecione uma carga'); return; }
+  if (!c || c.status !== 'finalizada') { setFb('fb-rec','fb-err','Selecione uma carga finalizada'); return; }
   const exp = c.expedidos || {}, rec = c.recebidos || {};
   const key = fbKey(id);
   if (rec[key] !== undefined) {
@@ -462,7 +479,7 @@ function scanReceber() {
     beep(true); setFb('fb-rec','fb-ok','✅ CONFERIDO', id);
     logScan('log-rec', id, 'ok');
   } else {
-    beep(false); setFb('fb-rec','fb-warn','⚠️ NÃO ESPERADO', id + ' — não foi bipado no EMG23');
+    beep(false); setFb('fb-rec','fb-warn','⚠️ NÃO ESPERADO', id + ' — não foi bipado na origem');
     logScan('log-rec', id, 'extra');
   }
   renderReceber();
@@ -479,7 +496,7 @@ function renderReceber() {
 }
 
 /* ============================================================
-   LOG DE BIPES (por sessão, em memória)
+   LOG DE BIPES (por sessão)
    ============================================================ */
 const LOGS = { 'log-exp': [], 'log-rec': [] };
 function logScan(host, id, kind) {
@@ -498,7 +515,8 @@ function logScan(host, id, kind) {
    CONFERÊNCIA
    ============================================================ */
 function renderConferencia() {
-  fillCargaSelect('carga-conf', document.getElementById('carga-conf').value);
+  fillCargaSelect('carga-conf', document.getElementById('carga-conf').value,
+    null, c => `${c.origem} · ${c.placa}`);
   const cid = document.getElementById('carga-conf').value;
   const body = document.getElementById('conf-body');
   const c = STATE.cargas[cid];
@@ -511,10 +529,10 @@ function renderConferencia() {
 
   body.innerHTML = `
     <div class="card">
-      <h2>${esc(c.nome)} ${statusTag(c.status)}</h2>
+      <h2><span class="tag org">${esc(c.origem)}</span> <span class="plate">${esc(c.placa)}</span> ${statusTag(c.status)}</h2>
       <p class="hint mono">${c.criada_turno||''}</p>
       <div class="stat-grid">
-        <div class="stat"><div class="n">${k.exp}</div><div class="l">Esperados EMG23</div></div>
+        <div class="stat"><div class="n">${k.exp}</div><div class="l">Esperados</div></div>
         <div class="stat"><div class="n">${k.rec}</div><div class="l">Recebidos SMG15</div></div>
         <div class="stat ok"><div class="n">${k.ok}</div><div class="l">Conferidos</div></div>
         <div class="stat miss"><div class="n">${k.miss}</div><div class="l">Faltando</div></div>
@@ -526,11 +544,11 @@ function renderConferencia() {
       }</div>
     </div>
     <div class="card">
-      <h2 style="color:var(--red)">Faltando — bipado no EMG23, não chegou no SMG15 (${missList.length})</h2>
+      <h2 style="color:var(--red)">Faltando — bipado na origem, não chegou no SMG15 (${missList.length})</h2>
       ${missList.length ? '<table><tbody>'+missList.map(id=>`<tr><td class="mono">${esc(id)}</td><td><span class="tag miss">FALTANDO</span></td></tr>`).join('')+'</tbody></table>' : '<div class="empty">Nenhum faltando 🎉</div>'}
     </div>
     <div class="card">
-      <h2 style="color:#a85d00">Não esperados — chegou no SMG15, não estava no EMG23 (${extraList.length})</h2>
+      <h2 style="color:#a85d00">Não esperados — chegou no SMG15, não estava na origem (${extraList.length})</h2>
       ${extraList.length ? '<table><tbody>'+extraList.map(id=>`<tr><td class="mono">${esc(id)}</td><td><span class="tag extra">NÃO ESPERADO</span></td></tr>`).join('')+'</tbody></table>' : '<div class="empty">Nenhum não-esperado</div>'}
     </div>`;
 }
@@ -540,51 +558,72 @@ function exportConf() {
   if (!c) return toast('Selecione uma carga');
   const exp = c.expedidos || {}, rec = c.recebidos || {};
   const ids = new Set([...Object.keys(exp), ...Object.keys(rec)]);
-  const rows = [['id_devolucao','expedido_emg23','recebido_smg15','status']];
+  const rows = [['origem','placa','id_devolucao','expedido','recebido','status']];
   [...ids].sort().forEach(id => {
     const e = exp[id]!==undefined, r = rec[id]!==undefined;
     const st = e&&r ? 'CONFERIDO' : e ? 'FALTANDO' : 'NAO_ESPERADO';
-    rows.push([id, e?'sim':'nao', r?'sim':'nao', st]);
+    rows.push([c.origem, c.placa, id, e?'sim':'nao', r?'sim':'nao', st]);
   });
   const csv = rows.map(r=>r.join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `conferencia_${(c.nome||'carga').replace(/[^\w]+/g,'_')}.csv`;
+  a.download = `conferencia_${c.origem}_${(c.placa||'carga').replace(/[^\w]+/g,'_')}.csv`;
   a.click();
   toast('CSV exportado');
+}
+
+/* ============================================================
+   CARGAS (gestão)
+   ============================================================ */
+function setStatus(id, status) { writeData('cargas/'+id+'/status', status); toast('Carga → ' + status.toUpperCase()); }
+function delCarga(id) {
+  const c = STATE.cargas[id]; if (!c) return;
+  if (!confirm(`Excluir a carga ${c.placa} (${c.origem})? Isso apaga todos os bipes dela.`)) return;
+  writeData('cargas/'+id, null);
+  if (selExp()===id) setSelExp(''); if (SEL.receber===id){ SEL.receber=''; localStorage.setItem('dv_sel_rec',''); }
+  toast('Carga excluída'); renderCargas();
+}
+function renderCargas() {
+  const host = document.getElementById('cargas-list');
+  const arr = cargasArr();
+  if (!arr.length) { host.innerHTML = '<div class="empty">Nenhuma carga ainda. Abra uma pela aba da origem (EMG23/37/26).</div>'; return; }
+  host.innerHTML = `<table><thead><tr>
+    <th>Origem</th><th>Placa</th><th>Status</th><th>Exp.</th><th>Rec.</th><th>Conf.</th><th>Falta</th><th>Não esp.</th><th></th>
+  </tr></thead><tbody>` + arr.map(c => {
+    const k = counts(c);
+    return `<tr>
+      <td><span class="tag org">${esc(c.origem)}</span></td>
+      <td><span class="plate">${esc(c.placa)}</span><div class="route-note mono">${c.criada_turno||''}</div></td>
+      <td>${statusTag(c.status)}</td>
+      <td class="mono">${k.exp}</td>
+      <td class="mono">${k.rec}</td>
+      <td class="mono" style="color:var(--green)">${k.ok}</td>
+      <td class="mono" style="color:var(--red)">${k.miss}</td>
+      <td class="mono" style="color:#a85d00">${k.extra}</td>
+      <td style="text-align:right;white-space:nowrap">
+        ${c.status==='aberta'?`<button class="btn sm ghost" onclick="setStatus('${c.id}','finalizada')">Finalizar</button> `:''}
+        ${c.status==='finalizada'?`<button class="btn sm ghost" onclick="setStatus('${c.id}','fechada')">Fechar</button> <button class="btn sm ghost" onclick="setStatus('${c.id}','aberta')">Reabrir</button> `:''}
+        ${c.status==='fechada'?`<button class="btn sm ghost" onclick="setStatus('${c.id}','finalizada')">Reabrir p/ receber</button> `:''}
+        <button class="btn sm red" onclick="delCarga('${c.id}')">Excluir</button>
+      </td>
+    </tr>`;
+  }).join('') + '</tbody></table>';
 }
 
 /* ============================================================
    RENDER GERAL (reage a mudanças do Firebase)
    ============================================================ */
 function renderAll() {
-  fillCargaSelect('carga-expedir', SEL.expedir);
-  fillCargaSelect('carga-receber', SEL.receber);
-  // reaplica seleção salva
-  if (SEL.expedir && STATE.cargas[SEL.expedir]) setCargaExpedirLite(SEL.expedir); else setCargaExpedirLite('');
-  if (SEL.receber && STATE.cargas[SEL.receber]) setCargaReceberLite(SEL.receber); else setCargaReceberLite('');
-  renderExpedir(); renderReceber();
-  if (document.getElementById('page-conferencia').classList.contains('active')) renderConferencia();
-  if (document.getElementById('page-cargas').classList.contains('active')) renderCargas();
-}
-// versões "lite": só atualizam estado visual sem re-focar/re-toast
-function setCargaExpedirLite(id) {
-  document.getElementById('carga-expedir').value = id;
-  const inp = document.getElementById('scan-exp'), sel = document.getElementById('sel-expedir');
-  inp.disabled = !id; sel.classList.toggle('none', !id);
-  const c = STATE.cargas[id];
-  document.getElementById('carga-expedir-info').textContent = c ? statusTxt(c) : '';
-}
-function setCargaReceberLite(id) {
-  document.getElementById('carga-receber').value = id;
-  const inp = document.getElementById('scan-rec'), sel = document.getElementById('sel-receber');
-  inp.disabled = !id; sel.classList.toggle('none', !id);
-  const c = STATE.cargas[id];
-  document.getElementById('carga-receber-info').textContent = c ? statusTxt(c) : '';
+  const active = document.querySelector('.page.active');
+  const id = active ? active.id : '';
+  if (id === 'page-expedir') initExpedir();
+  else if (id === 'page-receber') initReceber();
+  else if (id === 'page-conferencia') renderConferencia();
+  else if (id === 'page-cargas') renderCargas();
 }
 
-renderAll();
+goto('EMG23');
 </script>
 </body>
 </html>
