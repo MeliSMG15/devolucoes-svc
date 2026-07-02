@@ -325,7 +325,15 @@ function setLocal(path, value) {
   if (value === null) delete o[parts[parts.length-1]]; else o[parts[parts.length-1]] = value;
   cacheState();
 }
-db.ref(`${ROOT}/cargas`).on('value', snap => { STATE.cargas = snap.val() || {}; cacheState(); renderAll(); });
+function reapplyQueue() {
+  // preserva as gravações otimistas ainda não confirmadas pelo servidor,
+  // pra um snapshot não apagar um bipe recém-feito (ex: "não esperado")
+  QUEUE.forEach(item => {
+    const p = item.path.indexOf(ROOT + '/') === 0 ? item.path.slice(ROOT.length + 1) : item.path;
+    setLocal(p, item.value);
+  });
+}
+db.ref(`${ROOT}/cargas`).on('value', snap => { STATE.cargas = snap.val() || {}; reapplyQueue(); cacheState(); renderAll(); });
 
 /* ============================================================
    HELPERS
