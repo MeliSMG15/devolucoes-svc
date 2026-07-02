@@ -378,7 +378,22 @@ function toast(msg) {
   const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
   host.appendChild(t); setTimeout(() => t.remove(), 2600);
 }
-function normId(s) { return String(s||'').trim().replace(/\s+/g,''); }
+function normId(s) {
+  let v = String(s||'').trim();
+  if (!v) return '';
+  // QR em JSON, ex: {"id":"47323726873","t":"lm"} → extrai o id
+  if (v[0] === '{' || v[0] === '[') {
+    try {
+      const o = JSON.parse(v);
+      const cand = o.id ?? o.package_id ?? o.pkg_id ?? o.shipment_id ?? o.tracking_id ?? o.container_id;
+      if (cand != null) v = String(cand);
+    } catch(e) {
+      const m = v.match(/"id"\s*:\s*"?([^",}\s]+)"?/i);   // JSON malformado
+      if (m) v = m[1];
+    }
+  }
+  return v.trim().replace(/\s+/g,'');
+}
 function normPlaca(s) { return String(s||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,''); }
 function fbKey(s) { return String(s).replace(/[.#$/\[\]]/g,'_'); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
