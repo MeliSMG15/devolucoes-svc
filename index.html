@@ -28,11 +28,14 @@ body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', 
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
 .dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
 .dot.off { background: var(--red); }
-.tabs { display: flex; gap: 4px; padding: 12px 20px 0; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; }
+.origin-bar { display: flex; justify-content: center; gap: 10px; padding: 16px 20px 8px; background: var(--surface); flex-wrap: wrap; }
+.origin-btn { padding: 12px 30px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); font-family: inherit; font-size: 16px; font-weight: 700; border-radius: 12px; cursor: pointer; letter-spacing: .5px; display: flex; align-items: center; gap: 8px; transition: all .12s; }
+.origin-btn.active { background: var(--meli-blue); color: #fff; border-color: var(--meli-blue); box-shadow: 0 4px 14px rgba(45,50,119,.25); }
+.origin-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+.tabs { display: flex; justify-content: center; gap: 4px; padding: 6px 20px 0; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; }
 .tab { padding: 10px 16px; border: none; background: transparent; color: var(--text2); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 8px 8px 0 0; border-bottom: 3px solid transparent; white-space: nowrap; }
 .tab.active { color: var(--text); border-bottom-color: var(--meli); background: var(--surface2); }
 .tab:hover:not(.active) { color: var(--text); }
-.tab.sep { margin-left: 8px; border-left: 1px solid var(--border); padding-left: 16px; }
 .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 80px; }
 .page { display: none; } .page.active { display: block; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 10px rgba(45,50,119,.05); }
@@ -111,13 +114,16 @@ tr:hover td { background: var(--surface2); }
   </div>
 </div>
 
+<div class="origin-bar">
+  <button class="origin-btn active" data-org="EMG23" onclick="setOrigin('EMG23')">📍 EMG23</button>
+  <button class="origin-btn" data-org="EMG37" onclick="setOrigin('EMG37')">📍 EMG37</button>
+  <button class="origin-btn" data-org="EMG26" onclick="setOrigin('EMG26')">📍 EMG26</button>
+</div>
 <div class="tabs">
-  <button class="tab active" data-key="EMG23" onclick="goto('EMG23')">📤 EMG23</button>
-  <button class="tab" data-key="EMG37" onclick="goto('EMG37')">📤 EMG37</button>
-  <button class="tab" data-key="EMG26" onclick="goto('EMG26')">📤 EMG26</button>
-  <button class="tab sep" data-key="receber" onclick="goto('receber')">📥 SMG15 · Receber</button>
-  <button class="tab" data-key="conferencia" onclick="goto('conferencia')">✅ Conferência</button>
-  <button class="tab" data-key="cargas" onclick="goto('cargas')">🚚 Cargas</button>
+  <button class="tab active" data-sec="expedir" onclick="setSection('expedir')">📤 Expedir</button>
+  <button class="tab" data-sec="receber" onclick="setSection('receber')">📥 SMG15 · Receber</button>
+  <button class="tab" data-sec="conferencia" onclick="setSection('conferencia')">✅ Conferência</button>
+  <button class="tab" data-sec="cargas" onclick="setSection('cargas')">🚚 Cargas</button>
 </div>
 
 <div class="wrap">
@@ -190,7 +196,7 @@ tr:hover td { background: var(--surface2); }
   <div class="page" id="page-conferencia">
     <div class="carga-sel none" id="sel-conf">
       <span class="cs-label">Carga</span>
-      <select id="carga-conf" onchange="renderConferencia()"></select>
+      <select id="carga-conf" onchange="setCargaConf(this.value)"></select>
       <button class="btn sm ghost" onclick="exportConf()">⬇ Exportar CSV</button>
     </div>
     <div id="conf-body"></div>
@@ -200,7 +206,7 @@ tr:hover td { background: var(--surface2); }
   <div class="page" id="page-cargas">
     <div class="card">
       <h2>Cargas</h2>
-      <p class="hint">Uma carga = uma carreta (placa) de uma origem. Abra pela aba da origem (EMG23/37/26); aqui você acompanha, fecha ou exclui.</p>
+      <p class="hint">Carretas (placa) desta origem. Abra novas na aba <b>Expedir</b>; aqui você acompanha, fecha ou exclui.</p>
       <div id="cargas-list"></div>
     </div>
   </div>
@@ -240,8 +246,11 @@ firebase.auth().onAuthStateChanged(u => console.log('[auth]', u ? 'logado '+u.ui
 let STATE = { cargas: {} };
 let QUEUE = JSON.parse(localStorage.getItem('dv_queue') || '[]');
 let CUR_ORIGIN = 'EMG23';
-let SEL = { expedir: {}, receber: localStorage.getItem('dv_sel_rec') || '' };
+let CUR_SECTION = 'expedir';
+let SEL = { expedir: {}, receber: {}, conf: {} };
 try { SEL.expedir = JSON.parse(localStorage.getItem('dv_sel_exp') || '{}'); } catch(e){ SEL.expedir = {}; }
+try { SEL.receber = JSON.parse(localStorage.getItem('dv_sel_rec') || '{}'); } catch(e){ SEL.receber = {}; }
+try { SEL.conf = JSON.parse(localStorage.getItem('dv_sel_conf') || '{}'); } catch(e){ SEL.conf = {}; }
 const TURNO = turnoAtual();
 
 function turnoAtual() {
@@ -335,24 +344,35 @@ function setFb(id, cls, txt, sub) {
   el.innerHTML = txt + (sub?`<div class="scan-sub">${sub}</div>`:'');
 }
 
-/* seleção de carga por origem (expedir) */
+/* seleção de carga por origem, em cada seção */
 function selExp(){ return SEL.expedir[CUR_ORIGIN] || ''; }
 function setSelExp(id){ SEL.expedir[CUR_ORIGIN] = id; localStorage.setItem('dv_sel_exp', JSON.stringify(SEL.expedir)); }
+function selRec(){ return SEL.receber[CUR_ORIGIN] || ''; }
+function setSelRec(id){ SEL.receber[CUR_ORIGIN] = id; localStorage.setItem('dv_sel_rec', JSON.stringify(SEL.receber)); }
+function selConf(){ return SEL.conf[CUR_ORIGIN] || ''; }
+function setSelConf(id){ SEL.conf[CUR_ORIGIN] = id; localStorage.setItem('dv_sel_conf', JSON.stringify(SEL.conf)); }
 
 /* ============================================================
-   NAVEGAÇÃO (origens compartilham a página 'expedir')
+   NAVEGAÇÃO — 2 níveis: EMG (origem) × seção
+   Toda seção é filtrada pela origem atual (CUR_ORIGIN).
    ============================================================ */
-function goto(key) {
-  const page = ORIGENS.includes(key) ? 'expedir' : key;
-  if (ORIGENS.includes(key)) CUR_ORIGIN = key;
+function setOrigin(o) {
+  CUR_ORIGIN = o;
+  document.querySelectorAll('.origin-btn').forEach(b => b.classList.toggle('active', b.dataset.org === o));
+  renderSection();
+}
+function setSection(sec) {
+  CUR_SECTION = sec;
+  document.querySelectorAll('.tab[data-sec]').forEach(t => t.classList.toggle('active', t.dataset.sec === sec));
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('page-'+page).classList.add('active');
-  document.querySelector(`.tab[data-key="${key}"]`).classList.add('active');
-  if (page === 'expedir') initExpedir();
-  if (page === 'receber') initReceber();
-  if (page === 'conferencia') renderConferencia();
-  if (page === 'cargas') renderCargas();
+  document.getElementById('page-'+sec).classList.add('active');
+  renderSection();
+}
+function renderSection() {
+  if (CUR_SECTION === 'expedir') initExpedir();
+  else if (CUR_SECTION === 'receber') initReceber();
+  else if (CUR_SECTION === 'conferencia') renderConferencia();
+  else if (CUR_SECTION === 'cargas') renderCargas();
 }
 
 /* ============================================================
@@ -444,21 +464,21 @@ function renderExpedir() {
    SMG15 RECEBER
    ============================================================ */
 function initReceber() {
-  fillCargaSelect('carga-receber', SEL.receber,
-    c => c.status === 'finalizada',
-    c => `${c.origem} · ${c.placa} · ${counts(c).exp} esperados`);
+  fillCargaSelect('carga-receber', selRec(),
+    c => c.origem === CUR_ORIGIN && c.status === 'finalizada',
+    c => `${c.placa} · ${counts(c).exp} esperados`);
   applyReceberSel();
   setTimeout(() => { const i = document.getElementById('scan-rec'); if (!i.disabled) i.focus(); }, 50);
 }
-function setCargaReceber(id) { SEL.receber = id; localStorage.setItem('dv_sel_rec', id); applyReceberSel(); const i=document.getElementById('scan-rec'); if(!i.disabled) i.focus(); }
+function setCargaReceber(id) { setSelRec(id); applyReceberSel(); const i=document.getElementById('scan-rec'); if(!i.disabled) i.focus(); }
 function applyReceberSel() {
-  const id = SEL.receber, c = STATE.cargas[id];
-  const valid = !!(c && c.status === 'finalizada');
+  const id = selRec(), c = STATE.cargas[id];
+  const valid = !!(c && c.origem === CUR_ORIGIN && c.status === 'finalizada');
   document.getElementById('carga-receber').value = valid ? id : '';
   document.getElementById('scan-rec').disabled = !valid;
   document.getElementById('sel-receber').classList.toggle('none', !valid);
   document.getElementById('carga-receber-info').innerHTML = valid ? `<span class="tag org">${esc(c.origem)}</span> <span class="plate">${esc(c.placa)}</span>` : '';
-  if (!valid) { SEL.receber=''; localStorage.setItem('dv_sel_rec',''); setFb('fb-rec','fb-idle','Selecione uma carga para começar'); }
+  if (!valid) { setSelRec(''); setFb('fb-rec','fb-idle','Selecione uma carga para começar'); }
   else setFb('fb-rec','fb-idle','Pronto — bipe os pacotes');
   renderReceber();
 }
@@ -466,7 +486,7 @@ function scanReceber() {
   const inp = document.getElementById('scan-rec');
   const id = normId(inp.value); inp.value=''; inp.focus();
   if (!id) return;
-  const cid = SEL.receber, c = STATE.cargas[cid];
+  const cid = selRec(), c = STATE.cargas[cid];
   if (!c || c.status !== 'finalizada') { setFb('fb-rec','fb-err','Selecione uma carga finalizada'); return; }
   const exp = c.expedidos || {}, rec = c.recebidos || {};
   const key = fbKey(id);
@@ -485,7 +505,7 @@ function scanReceber() {
   renderReceber();
 }
 function renderReceber() {
-  const c = STATE.cargas[SEL.receber];
+  const c = STATE.cargas[selRec()];
   const k = c ? counts(c) : {exp:0,ok:0,miss:0,extra:0};
   document.getElementById('rec-exp').textContent = k.exp;
   document.getElementById('rec-ok').textContent = k.ok;
@@ -514,9 +534,10 @@ function logScan(host, id, kind) {
 /* ============================================================
    CONFERÊNCIA
    ============================================================ */
+function setCargaConf(id) { setSelConf(id); renderConferencia(); }
 function renderConferencia() {
-  fillCargaSelect('carga-conf', document.getElementById('carga-conf').value,
-    null, c => `${c.origem} · ${c.placa}`);
+  fillCargaSelect('carga-conf', selConf(),
+    c => c.origem === CUR_ORIGIN, c => `${c.placa}`);
   const cid = document.getElementById('carga-conf').value;
   const body = document.getElementById('conf-body');
   const c = STATE.cargas[cid];
@@ -581,19 +602,18 @@ function delCarga(id) {
   const c = STATE.cargas[id]; if (!c) return;
   if (!confirm(`Excluir a carga ${c.placa} (${c.origem})? Isso apaga todos os bipes dela.`)) return;
   writeData('cargas/'+id, null);
-  if (selExp()===id) setSelExp(''); if (SEL.receber===id){ SEL.receber=''; localStorage.setItem('dv_sel_rec',''); }
+  if (selExp()===id) setSelExp(''); if (selRec()===id) setSelRec('');
   toast('Carga excluída'); renderCargas();
 }
 function renderCargas() {
   const host = document.getElementById('cargas-list');
-  const arr = cargasArr();
-  if (!arr.length) { host.innerHTML = '<div class="empty">Nenhuma carga ainda. Abra uma pela aba da origem (EMG23/37/26).</div>'; return; }
+  const arr = cargasArr().filter(c => c.origem === CUR_ORIGIN);
+  if (!arr.length) { host.innerHTML = '<div class="empty">Nenhuma carga aberta ainda em '+CUR_ORIGIN+'. Abra uma na aba Expedir.</div>'; return; }
   host.innerHTML = `<table><thead><tr>
-    <th>Origem</th><th>Placa</th><th>Status</th><th>Exp.</th><th>Rec.</th><th>Conf.</th><th>Falta</th><th>Não esp.</th><th></th>
+    <th>Placa</th><th>Status</th><th>Exp.</th><th>Rec.</th><th>Conf.</th><th>Falta</th><th>Não esp.</th><th></th>
   </tr></thead><tbody>` + arr.map(c => {
     const k = counts(c);
     return `<tr>
-      <td><span class="tag org">${esc(c.origem)}</span></td>
       <td><span class="plate">${esc(c.placa)}</span><div class="route-note mono">${c.criada_turno||''}</div></td>
       <td>${statusTag(c.status)}</td>
       <td class="mono">${k.exp}</td>
@@ -614,16 +634,10 @@ function renderCargas() {
 /* ============================================================
    RENDER GERAL (reage a mudanças do Firebase)
    ============================================================ */
-function renderAll() {
-  const active = document.querySelector('.page.active');
-  const id = active ? active.id : '';
-  if (id === 'page-expedir') initExpedir();
-  else if (id === 'page-receber') initReceber();
-  else if (id === 'page-conferencia') renderConferencia();
-  else if (id === 'page-cargas') renderCargas();
-}
+function renderAll() { renderSection(); }
 
-goto('EMG23');
+setOrigin('EMG23');
+setSection('expedir');
 </script>
 </body>
 </html>
