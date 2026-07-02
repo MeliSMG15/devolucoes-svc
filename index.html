@@ -28,11 +28,17 @@ body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', 
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
 .dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
 .dot.off { background: var(--red); }
-.day-bar { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 14px 20px 4px; background: var(--surface); flex-wrap: wrap; }
-.day-bar .day-nav { width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); font-size: 18px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.day-bar .day-nav:hover { border-color: var(--accent); color: var(--text); }
-.day-bar input[type=date] { font-family: 'DM Mono', monospace; font-weight: 600; font-size: 15px; text-align: center; }
-.day-bar .today-tag { font-size: 11px; color: var(--green); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+.day-bar { display: flex; justify-content: center; align-items: center; gap: 12px; padding: 16px 20px 6px; background: var(--surface); flex-wrap: wrap; }
+.day-ctl { position: relative; display: inline-flex; align-items: stretch; background: var(--surface2); border: 1px solid var(--border2); border-radius: 12px; overflow: hidden; height: 48px; }
+.day-arrow { border: none; background: transparent; color: var(--text2); font-size: 22px; font-weight: 700; width: 42px; cursor: pointer; }
+.day-arrow:hover { background: var(--surface3); color: var(--text); }
+.day-cur { border: none; border-left: 1px solid var(--border); border-right: 1px solid var(--border); background: transparent; cursor: pointer; padding: 5px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-width: 155px; font-family: inherit; }
+.day-cur:hover { background: var(--surface3); }
+.day-cur .wd { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .8px; font-weight: 600; }
+.day-cur .fmt { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: .3px; }
+.day-ctl input[type=date] { position: absolute; left: 50%; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+#hoje-btn { height: 48px; border-radius: 12px; }
+#hoje-btn.active-today { background: var(--meli-blue); color: #fff; border-color: var(--meli-blue); }
 .loc-bar { display: flex; justify-content: center; align-items: center; gap: 10px; padding: 10px 20px 8px; background: var(--surface); flex-wrap: wrap; }
 .loc-btn { padding: 12px 28px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); font-family: inherit; font-size: 16px; font-weight: 700; border-radius: 12px; cursor: pointer; letter-spacing: .5px; display: flex; align-items: center; gap: 8px; transition: all .12s; }
 .loc-btn.active { background: var(--meli-blue); color: #fff; border-color: var(--meli-blue); box-shadow: 0 4px 14px rgba(45,50,119,.25); }
@@ -125,11 +131,16 @@ tr:hover td { background: var(--surface2); }
 </div>
 
 <div class="day-bar">
-  <button class="day-nav" onclick="shiftDia(-1)" title="Dia anterior">‹</button>
-  <input type="date" id="dia-input" onchange="setDia(this.value)">
-  <button class="day-nav" onclick="shiftDia(1)" title="Próximo dia">›</button>
-  <button class="btn sm ghost" onclick="setDia(hojeLocal())">Hoje</button>
-  <span class="today-tag" id="hoje-tag"></span>
+  <div class="day-ctl">
+    <button class="day-arrow" onclick="shiftDia(-1)" title="Dia anterior">‹</button>
+    <button class="day-cur" onclick="openDiaPicker()" title="Escolher data">
+      <span class="wd" id="dia-wd">—</span>
+      <span class="fmt" id="dia-fmt">—</span>
+    </button>
+    <button class="day-arrow" onclick="shiftDia(1)" title="Próximo dia">›</button>
+    <input type="date" id="dia-input" onchange="setDia(this.value)">
+  </div>
+  <button class="btn sm ghost" id="hoje-btn" onclick="setDia(hojeLocal())">Hoje</button>
 </div>
 <div class="loc-bar">
   <button class="loc-btn active" data-loc="EMG23" onclick="setLoc('EMG23')">📍 EMG23</button>
@@ -421,12 +432,26 @@ function inDay(c){ return cargaDia(c) === CUR_DIA; }
    NAVEGAÇÃO — níveis: DIA × EMG (origem) × seção
    Toda seção é filtrada pelo dia e origem atuais.
    ============================================================ */
+const WD_NOMES = ['dom','seg','ter','qua','qui','sex','sáb'];
+const MES_NOMES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 function setDia(iso) {
   if (!iso) return;
   CUR_DIA = iso;
   document.getElementById('dia-input').value = iso;
-  document.getElementById('hoje-tag').textContent = (iso === hojeLocal()) ? '● hoje' : '';
+  const [y,m,d] = iso.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  document.getElementById('dia-wd').textContent = WD_NOMES[dt.getDay()];
+  document.getElementById('dia-fmt').textContent = String(d).padStart(2,'0') + ' ' + MES_NOMES[m-1] + ' ' + y;
+  const isToday = iso === hojeLocal();
+  const hojeBtn = document.getElementById('hoje-btn');
+  hojeBtn.classList.toggle('active-today', isToday);
+  hojeBtn.textContent = isToday ? '● Hoje' : 'Hoje';
   renderSection();
+}
+function openDiaPicker() {
+  const i = document.getElementById('dia-input');
+  if (i.showPicker) { try { i.showPicker(); return; } catch(e){} }
+  i.focus();
 }
 function shiftDia(delta) {
   const d = new Date(CUR_DIA + 'T12:00:00');
