@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conferência de Devoluções · EMG23 → SMG15 · MELI</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='8' fill='%23FFE600'/%3E%3Cpath d='M22 8 L12 8 A6 6 0 0 0 6 14 L6 26 A6 6 0 0 0 12 32 L28 32 A6 6 0 0 0 34 26 L34 20' stroke='%232D3277' stroke-width='3.2' stroke-linecap='round' fill='none'/%3E%3Cpath d='M28 6 L34 12 L28 18' stroke='%232D3277' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #c7d8ee; --surface: #ffffff; --surface2: #e6eef9; --surface3: #d6e2f3;
+  --border: #b9cde8; --border2: #9fbce2; --text: #232a47; --text2: #4f5f80; --text3: #8294b4;
+  --accent: #3483FA; --accent2: #2a6fe0; --green: #00a650; --red: #e63946; --yellow: #f5a623;
+  --meli: #FFE600; --meli-blue: #2D3277;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', sans-serif; min-height: 100vh; }
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); border-top: 3px solid var(--meli); padding: 0 20px; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(45,50,119,.06); }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-icon { width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: var(--meli); }
+.brand-name { font-weight: 700; font-size: 16px; letter-spacing: -0.5px; }
+.brand-sub { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.pill { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2); background: var(--surface2); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.dot.off { background: var(--red); }
+.tabs { display: flex; gap: 4px; padding: 12px 20px 0; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; }
+.tab { padding: 10px 16px; border: none; background: transparent; color: var(--text2); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 8px 8px 0 0; border-bottom: 3px solid transparent; white-space: nowrap; }
+.tab.active { color: var(--text); border-bottom-color: var(--meli); background: var(--surface2); }
+.tab:hover:not(.active) { color: var(--text); }
+.tab .tb { font-family: 'DM Mono', monospace; font-size: 11px; margin-left: 6px; opacity: .7; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 80px; }
+.page { display: none; } .page.active { display: block; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 10px rgba(45,50,119,.05); }
+.card h2 { font-size: 16px; margin-bottom: 4px; }
+.card .hint { font-size: 12.5px; color: var(--text3); margin-bottom: 16px; line-height: 1.5; }
+.card .hint code { background: var(--surface2); padding: 1px 5px; border-radius: 4px; font-family: 'DM Mono',monospace; color: var(--text2); }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+label.fld { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--text2); font-weight: 600; }
+input, select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 9px; padding: 10px 12px; font-family: inherit; font-size: 14px; outline: none; }
+input:focus, select:focus { border-color: var(--accent); }
+input::placeholder { color: var(--text3); }
+.btn { background: var(--accent); color: #fff; border: none; border-radius: 9px; padding: 10px 16px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn:hover { background: var(--accent2); }
+.btn.ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); }
+.btn.green { background: var(--green); } .btn.green:hover { background: #008f45; }
+.btn.red { background: var(--red); } .btn.red:hover { background: #cc2f3c; }
+.btn.sm { padding: 6px 11px; font-size: 12.5px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+th { color: var(--text3); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+tr:hover td { background: var(--surface2); }
+.mono { font-family: 'DM Mono', monospace; }
+.tag { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; font-family: 'DM Mono', monospace; white-space: nowrap; }
+.tag.ok { background: rgba(0,166,80,.14); color: #00854f; }
+.tag.miss { background: rgba(230,57,70,.13); color: #c0283a; }
+.tag.extra { background: rgba(245,166,35,.18); color: #a85d00; }
+.tag.open { background: rgba(52,131,250,.13); color: #1f5fc4; }
+.tag.exp { background: var(--surface3); color: var(--text2); }
+.tag.done { background: rgba(0,166,80,.14); color: #00854f; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(120px,1fr)); gap: 12px; }
+.stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+.stat.big .n { font-size: 34px; }
+.stat .n { font-size: 28px; font-weight: 700; font-family: 'DM Mono', monospace; line-height: 1; }
+.stat .l { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; margin-top: 4px; }
+.stat.ok .n { color: var(--green); } .stat.miss .n { color: var(--red); } .stat.extra .n { color: #a85d00; }
+.empty { text-align: center; color: var(--text3); padding: 30px; font-size: 13px; }
+.scan-box { text-align: center; padding: 6px 0 14px; }
+.scan-input { font-size: 26px; text-align: center; letter-spacing: 1px; font-family: 'DM Mono', monospace; width: 100%; max-width: 520px; padding: 16px; }
+.scan-feedback { margin: 18px auto 0; max-width: 620px; padding: 22px; border-radius: 14px; font-size: 22px; font-weight: 700; transition: all .1s; }
+.fb-ok { background: rgba(0,166,80,.12); border: 1px solid var(--green); color: #00854f; }
+.fb-err { background: rgba(230,57,70,.12); border: 1px solid var(--red); color: #c0283a; }
+.fb-warn { background: rgba(245,166,35,.14); border: 1px solid var(--yellow); color: #a85d00; }
+.fb-idle { background: var(--surface2); border: 1px solid var(--border); color: var(--text3); font-weight: 500; font-size: 15px; }
+.scan-sub { font-size: 15px; font-weight: 500; margin-top: 8px; opacity: .9; }
+.scan-log { margin-top: 18px; max-height: 340px; overflow-y: auto; }
+.carga-sel { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 16px; border-radius: 12px; background: var(--surface2); border: 1px solid var(--border); margin-bottom: 16px; }
+.carga-sel.none { border-color: var(--yellow); background: rgba(245,166,35,.1); }
+.carga-sel .cs-label { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+.carga-sel select { min-width: 220px; font-weight: 600; }
+.prog { height: 10px; background: var(--surface2); border-radius: 6px; overflow: hidden; border: 1px solid var(--border); margin-top: 6px; }
+.prog > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); border-radius: 6px; transition: width .3s; }
+.toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--meli-blue); color: #fff; padding: 12px 20px; border-radius: 10px; font-size: 14px; z-index: 999; box-shadow: 0 8px 30px rgba(45,50,119,.25); }
+.route-note { font-size: 12px; color: var(--text3); margin-top: 4px; }
+.big-count { font-family: 'DM Mono', monospace; font-size: 40px; font-weight: 700; }
+audio { display: none; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-icon">
+      <svg width="24" height="24" viewBox="0 0 40 40"><path d="M22 8 L12 8 A6 6 0 0 0 6 14 L6 26 A6 6 0 0 0 12 32 L28 32 A6 6 0 0 0 34 26 L34 20" stroke="#2D3277" stroke-width="3.2" stroke-linecap="round" fill="none"/><path d="M28 6 L34 12 L28 18" stroke="#2D3277" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+    </div>
+    <div>
+      <div class="brand-name">Conferência de Devoluções</div>
+      <div class="brand-sub">EMG23 → SMG15</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="pill" id="turno-pill">turno —</span>
+    <span class="pill" id="queue-pill" style="display:none"></span>
+    <span class="pill"><span class="dot off" id="conn-dot"></span><span id="conn-txt">…</span></span>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-page="expedir" onclick="goto('expedir')">📤 EMG23 · Expedir</button>
+  <button class="tab" data-page="receber" onclick="goto('receber')">📥 SMG15 · Receber</button>
+  <button class="tab" data-page="conferencia" onclick="goto('conferencia')">✅ Conferência</button>
+  <button class="tab" data-page="cargas" onclick="goto('cargas')">📦 Cargas</button>
+</div>
+
+<div class="wrap">
+
+  <!-- ====================== EMG23 EXPEDIR ====================== -->
+  <div class="page active" id="page-expedir">
+    <div class="carga-sel none" id="sel-expedir">
+      <span class="cs-label">Carga</span>
+      <select id="carga-expedir" onchange="setCargaExpedir(this.value)"></select>
+      <button class="btn sm ghost" onclick="goto('cargas')">+ Nova carga</button>
+      <span id="carga-expedir-info" class="route-note"></span>
+    </div>
+
+    <div class="card">
+      <h2>Bipar IDs de devolução — EMG23</h2>
+      <p class="hint">Selecione (ou crie) a carga, bipe cada <b>ID de devolução</b> (número puro). Isso monta a <b>lista esperada</b> que o SMG15 vai conferir no recebimento.</p>
+      <div class="scan-box">
+        <input class="scan-input" id="scan-exp" placeholder="Bipe o ID de devolução…" autocomplete="off" disabled
+               onkeydown="if(event.key==='Enter'){event.preventDefault();scanExpedir()}">
+        <div class="scan-feedback fb-idle" id="fb-exp">Selecione uma carga para começar</div>
+      </div>
+      <div class="stat-grid" style="margin-top:8px">
+        <div class="stat big"><div class="n" id="exp-total">0</div><div class="l">Bipados nesta carga</div></div>
+      </div>
+      <div class="scan-log" id="log-exp"></div>
+    </div>
+  </div>
+
+  <!-- ====================== SMG15 RECEBER ====================== -->
+  <div class="page" id="page-receber">
+    <div class="carga-sel none" id="sel-receber">
+      <span class="cs-label">Carga</span>
+      <select id="carga-receber" onchange="setCargaReceber(this.value)"></select>
+      <span id="carga-receber-info" class="route-note"></span>
+    </div>
+
+    <div class="card">
+      <h2>Receber e conferir — SMG15</h2>
+      <p class="hint">Bipe cada pacote recebido. O app confere na hora contra o que o EMG23 expediu: <span class="tag ok">CONFERIDO</span> esperado e ok · <span class="tag extra">NÃO ESPERADO</span> chegou sem ter sido bipado no EMG23.</p>
+      <div class="scan-box">
+        <input class="scan-input" id="scan-rec" placeholder="Bipe o pacote recebido…" autocomplete="off" disabled
+               onkeydown="if(event.key==='Enter'){event.preventDefault();scanReceber()}">
+        <div class="scan-feedback fb-idle" id="fb-rec">Selecione uma carga para começar</div>
+      </div>
+      <div class="stat-grid" style="margin-top:8px">
+        <div class="stat"><div class="n" id="rec-exp">0</div><div class="l">Esperados (EMG23)</div></div>
+        <div class="stat ok"><div class="n" id="rec-ok">0</div><div class="l">Conferidos</div></div>
+        <div class="stat miss"><div class="n" id="rec-miss">0</div><div class="l">Faltando</div></div>
+        <div class="stat extra"><div class="n" id="rec-extra">0</div><div class="l">Não esperados</div></div>
+      </div>
+      <div class="prog"><i id="rec-prog" style="width:0%"></i></div>
+      <div class="scan-log" id="log-rec"></div>
+    </div>
+  </div>
+
+  <!-- ====================== CONFERÊNCIA ====================== -->
+  <div class="page" id="page-conferencia">
+    <div class="carga-sel none" id="sel-conf">
+      <span class="cs-label">Carga</span>
+      <select id="carga-conf" onchange="renderConferencia()"></select>
+      <button class="btn sm ghost" onclick="exportConf()">⬇ Exportar CSV</button>
+    </div>
+    <div id="conf-body"></div>
+  </div>
+
+  <!-- ====================== CARGAS ====================== -->
+  <div class="page" id="page-cargas">
+    <div class="card">
+      <h2>Nova carga</h2>
+      <p class="hint">Uma carga = uma remessa de devolução (ex: caminhão, rota ou data). O EMG23 bipa dentro dela e o SMG15 concilia essa mesma carga.</p>
+      <div class="row">
+        <label class="fld">Nome / identificação
+          <input id="nova-carga-nome" placeholder="ex: Caminhão 08:00 · Rota R7" style="min-width:280px">
+        </label>
+        <button class="btn green" onclick="criarCarga()">Criar carga</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Cargas</h2>
+      <div id="cargas-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast-host"></div>
+
+<script>
+/* ============================================================
+   FIREBASE (mesmo projeto registrosmg15, nó isolado devolucoes/)
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyCR-O8PWfKdTANDPnu59DeACPmAN-TrJsI",
+  authDomain: "registrosmg15.firebaseapp.com",
+  databaseURL: "https://registrosmg15-default-rtdb.firebaseio.com",
+  projectId: "registrosmg15",
+  storageBucket: "registrosmg15.firebasestorage.app",
+  messagingSenderId: "353674201769",
+  appId: "1:353674201769:web:14f0e14647e85875b4b7b8"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const ROOT = 'devolucoes';
+firebase.auth().signInAnonymously().catch(e => {
+  console.warn('[auth] anon falhou:', e.code, e.message);
+  setTimeout(() => toast('⚠️ Login anônimo falhou (' + (e.code||'') + ')'), 1200);
+});
+firebase.auth().onAuthStateChanged(u => console.log('[auth]', u ? 'logado '+u.uid : 'NÃO logado'));
+
+/* ============================================================
+   ESTADO + CACHE / FILA OFFLINE
+   cargas[id] = { nome, status, criada_em, criada_turno,
+                  expedidos:{[pkg]:ts}, recebidos:{[pkg]:ts} }
+   ============================================================ */
+let STATE = { cargas: {} };
+let QUEUE = JSON.parse(localStorage.getItem('dv_queue') || '[]');
+let SEL = { expedir: localStorage.getItem('dv_sel_exp') || '', receber: localStorage.getItem('dv_sel_rec') || '' };
+const TURNO = turnoAtual();
+
+function turnoAtual() {
+  const d = new Date(), h = d.getHours();
+  const t = h < 12 ? 'T1' : h < 18 ? 'T2' : 'T3';
+  return `${d.toISOString().slice(0,10)}-${t}`;
+}
+document.getElementById('turno-pill').textContent = 'turno ' + TURNO;
+
+function cacheState() { try { localStorage.setItem('dv_state', JSON.stringify(STATE)); } catch(e){} }
+(function(){ try { const c = JSON.parse(localStorage.getItem('dv_state')||'null'); if (c) STATE = Object.assign(STATE, c); } catch(e){} })();
+
+function persistQueue() { localStorage.setItem('dv_queue', JSON.stringify(QUEUE)); updateQueueBadge(); }
+function enqueue(path, value) { QUEUE.push({ path, value }); persistQueue(); flushQueue(); }
+function flushQueue() {
+  if (!navigator.onLine || QUEUE.length === 0) return;
+  const pending = QUEUE; QUEUE = []; persistQueue();
+  pending.forEach(item => db.ref(item.path).set(item.value)
+    .catch(err => { console.warn('[queue]', item.path, err.code, err.message); QUEUE.push(item); persistQueue(); reportFbError(err); }));
+}
+let fbErrShown = 0;
+function reportFbError(err) {
+  const now = Date.now(); if (now - fbErrShown < 5000) return; fbErrShown = now;
+  const msg = (err && (err.code + ' ' + err.message)) || String(err);
+  let dica = /permission|PERMISSION_DENIED/i.test(msg) ? ' → regras do RTDB exigem auth' : '';
+  toast('❌ Firebase recusou gravação' + dica);
+}
+window.addEventListener('online', () => { setConn(true); flushQueue(); });
+window.addEventListener('offline', () => setConn(false));
+function setConn(on) {
+  document.getElementById('conn-dot').className = 'dot ' + (on ? 'on' : 'off');
+  document.getElementById('conn-txt').textContent = on ? 'online' : 'offline';
+}
+function updateQueueBadge() {
+  const p = document.getElementById('queue-pill');
+  if (!QUEUE.length) p.style.display = 'none';
+  else { p.style.display = ''; p.textContent = `⏳ ${QUEUE.length} na fila`; }
+}
+db.ref('.info/connected').on('value', s => { const on = !!s.val(); setConn(on); if (on) flushQueue(); });
+
+function writeData(path, value) { setLocal(path, value); enqueue(`${ROOT}/${path}`, value); }
+function setLocal(path, value) {
+  const parts = path.split('/'); let o = STATE;
+  for (let i=0; i<parts.length-1; i++) { o[parts[i]] = o[parts[i]] || {}; o = o[parts[i]]; }
+  if (value === null) delete o[parts[parts.length-1]]; else o[parts[parts.length-1]] = value;
+  cacheState();
+}
+db.ref(`${ROOT}/cargas`).on('value', snap => { STATE.cargas = snap.val() || {}; cacheState(); renderAll(); });
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function toast(msg) {
+  const host = document.getElementById('toast-host');
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  host.appendChild(t); setTimeout(() => t.remove(), 2600);
+}
+function normId(s) { return String(s||'').trim().replace(/\s+/g,''); }
+function fbKey(s) { return String(s).replace(/[.#$/\[\]]/g,'_'); }
+function beep(ok) {
+  try {
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = ok ? 880 : 300; o.type = 'sine';
+    g.gain.setValueAtTime(.12, ctx.currentTime);
+    o.start(); o.stop(ctx.currentTime + (ok ? .09 : .22));
+  } catch(e){}
+}
+function cargasArr() {
+  return Object.entries(STATE.cargas||{})
+    .map(([id,c]) => ({ id, ...c }))
+    .sort((a,b) => (b.criada_em||0) - (a.criada_em||0));
+}
+function statusTag(s) {
+  const map = { aberta:['open','ABERTA'], expedida:['exp','EXPEDIDA'], fechada:['done','FECHADA'] };
+  const [cls,txt] = map[s] || ['open', (s||'').toUpperCase()];
+  return `<span class="tag ${cls}">${txt}</span>`;
+}
+function counts(c) {
+  const exp = c.expedidos || {}, rec = c.recebidos || {};
+  const ek = Object.keys(exp), rk = Object.keys(rec);
+  let ok = 0; rk.forEach(k => { if (exp[k] !== undefined) ok++; });
+  const miss = ek.length - ok;
+  const extra = rk.length - ok;
+  return { exp: ek.length, rec: rk.length, ok, miss, extra };
+}
+
+/* ============================================================
+   NAVEGAÇÃO
+   ============================================================ */
+function goto(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelector(`.tab[data-page="${page}"]`).classList.add('active');
+  if (page === 'expedir') setTimeout(() => { const i=document.getElementById('scan-exp'); if(!i.disabled) i.focus(); }, 50);
+  if (page === 'receber') setTimeout(() => { const i=document.getElementById('scan-rec'); if(!i.disabled) i.focus(); }, 50);
+  if (page === 'conferencia') renderConferencia();
+  if (page === 'cargas') renderCargas();
+}
+
+/* ============================================================
+   CARGAS
+   ============================================================ */
+function criarCarga() {
+  const nome = document.getElementById('nova-carga-nome').value.trim();
+  if (!nome) return toast('Dê um nome para a carga');
+  const id = 'C' + Date.now().toString(36);
+  writeData('cargas/'+id, { nome, status: 'aberta', criada_em: Date.now(), criada_turno: TURNO, expedidos: {}, recebidos: {} });
+  document.getElementById('nova-carga-nome').value = '';
+  toast('Carga criada: ' + nome);
+  SEL.expedir = id; localStorage.setItem('dv_sel_exp', id);
+  renderAll();
+}
+function setStatus(id, status) { writeData('cargas/'+id+'/status', status); toast('Carga → ' + status.toUpperCase()); }
+function delCarga(id) {
+  const c = STATE.cargas[id]; if (!c) return;
+  if (!confirm(`Excluir a carga "${c.nome}"? Isso apaga todos os bipes dela.`)) return;
+  writeData('cargas/'+id, null);
+  if (SEL.expedir===id) SEL.expedir=''; if (SEL.receber===id) SEL.receber='';
+  toast('Carga excluída'); renderAll();
+}
+function renderCargas() {
+  const host = document.getElementById('cargas-list');
+  const arr = cargasArr();
+  if (!arr.length) { host.innerHTML = '<div class="empty">Nenhuma carga ainda. Crie a primeira acima.</div>'; return; }
+  host.innerHTML = `<table><thead><tr>
+    <th>Carga</th><th>Status</th><th>Expedidos</th><th>Recebidos</th><th>Conf.</th><th>Falta</th><th>Não esp.</th><th></th>
+  </tr></thead><tbody>` + arr.map(c => {
+    const k = counts(c);
+    return `<tr>
+      <td><b>${esc(c.nome)}</b><div class="route-note mono">${c.criada_turno||''}</div></td>
+      <td>${statusTag(c.status)}</td>
+      <td class="mono">${k.exp}</td>
+      <td class="mono">${k.rec}</td>
+      <td class="mono" style="color:var(--green)">${k.ok}</td>
+      <td class="mono" style="color:var(--red)">${k.miss}</td>
+      <td class="mono" style="color:#a85d00">${k.extra}</td>
+      <td style="text-align:right;white-space:nowrap">
+        ${c.status!=='expedida'?`<button class="btn sm ghost" onclick="setStatus('${c.id}','expedida')">Marcar expedida</button> `:''}
+        ${c.status!=='fechada'?`<button class="btn sm ghost" onclick="setStatus('${c.id}','fechada')">Fechar</button> `:'<button class="btn sm ghost" onclick="setStatus(\''+c.id+'\',\'aberta\')">Reabrir</button> '}
+        <button class="btn sm red" onclick="delCarga('${c.id}')">Excluir</button>
+      </td>
+    </tr>`;
+  }).join('') + '</tbody></table>';
+}
+
+/* ============================================================
+   SELETORES DE CARGA
+   ============================================================ */
+function fillCargaSelect(elId, selected, filterFn) {
+  const el = document.getElementById(elId);
+  const arr = cargasArr().filter(filterFn || (()=>true));
+  el.innerHTML = '<option value="">— selecione —</option>' +
+    arr.map(c => { const k=counts(c); return `<option value="${c.id}" ${c.id===selected?'selected':''}>${esc(c.nome)} · ${k.exp} exp${c.status==='fechada'?' · fechada':''}</option>`; }).join('');
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+function setCargaExpedir(id) {
+  SEL.expedir = id; localStorage.setItem('dv_sel_exp', id);
+  const inp = document.getElementById('scan-exp'), sel = document.getElementById('sel-expedir');
+  const c = STATE.cargas[id];
+  inp.disabled = !id; sel.classList.toggle('none', !id);
+  document.getElementById('carga-expedir-info').textContent = c ? statusTxt(c) : '';
+  if (id) { inp.focus(); setFb('fb-exp','fb-idle','Pronto — bipe os IDs'); } else setFb('fb-exp','fb-idle','Selecione uma carga para começar');
+  renderExpedir();
+}
+function setCargaReceber(id) {
+  SEL.receber = id; localStorage.setItem('dv_sel_rec', id);
+  const inp = document.getElementById('scan-rec'), sel = document.getElementById('sel-receber');
+  const c = STATE.cargas[id];
+  inp.disabled = !id; sel.classList.toggle('none', !id);
+  document.getElementById('carga-receber-info').textContent = c ? statusTxt(c) : '';
+  if (id) { inp.focus(); setFb('fb-rec','fb-idle','Pronto — bipe os pacotes'); } else setFb('fb-rec','fb-idle','Selecione uma carga para começar');
+  renderReceber();
+}
+function statusTxt(c){ const k=counts(c); return `${c.status.toUpperCase()} · ${k.exp} esperados`; }
+function setFb(id, cls, txt, sub) {
+  const el = document.getElementById(id);
+  el.className = 'scan-feedback ' + cls;
+  el.innerHTML = txt + (sub?`<div class="scan-sub">${sub}</div>`:'');
+}
+
+/* ============================================================
+   SCAN — EMG23 (expedir)
+   ============================================================ */
+function scanExpedir() {
+  const inp = document.getElementById('scan-exp');
+  const id = normId(inp.value); inp.value=''; inp.focus();
+  if (!id) return;
+  const cid = SEL.expedir, c = STATE.cargas[cid];
+  if (!c) { setFb('fb-exp','fb-err','Selecione uma carga'); return; }
+  const exp = c.expedidos || {};
+  const key = fbKey(id);
+  if (exp[key] !== undefined) {
+    beep(false); setFb('fb-exp','fb-warn','⚠️ JÁ BIPADO', id + ' já está nesta carga');
+    logScan('log-exp', id, 'dup'); return;
+  }
+  writeData(`cargas/${cid}/expedidos/${key}`, Date.now());
+  beep(true); setFb('fb-exp','fb-ok','✅ ADICIONADO', id);
+  logScan('log-exp', id, 'add');
+  renderExpedir();
+}
+function renderExpedir() {
+  const c = STATE.cargas[SEL.expedir];
+  const k = c ? counts(c) : {exp:0};
+  document.getElementById('exp-total').textContent = k.exp;
+}
+
+/* ============================================================
+   SCAN — SMG15 (receber / conferir)
+   ============================================================ */
+function scanReceber() {
+  const inp = document.getElementById('scan-rec');
+  const id = normId(inp.value); inp.value=''; inp.focus();
+  if (!id) return;
+  const cid = SEL.receber, c = STATE.cargas[cid];
+  if (!c) { setFb('fb-rec','fb-err','Selecione uma carga'); return; }
+  const exp = c.expedidos || {}, rec = c.recebidos || {};
+  const key = fbKey(id);
+  if (rec[key] !== undefined) {
+    beep(false); setFb('fb-rec','fb-warn','⚠️ JÁ RECEBIDO', id + ' já foi bipado no recebimento');
+    logScan('log-rec', id, 'dup'); return;
+  }
+  writeData(`cargas/${cid}/recebidos/${key}`, Date.now());
+  if (exp[key] !== undefined) {
+    beep(true); setFb('fb-rec','fb-ok','✅ CONFERIDO', id);
+    logScan('log-rec', id, 'ok');
+  } else {
+    beep(false); setFb('fb-rec','fb-warn','⚠️ NÃO ESPERADO', id + ' — não foi bipado no EMG23');
+    logScan('log-rec', id, 'extra');
+  }
+  renderReceber();
+}
+function renderReceber() {
+  const c = STATE.cargas[SEL.receber];
+  const k = c ? counts(c) : {exp:0,ok:0,miss:0,extra:0};
+  document.getElementById('rec-exp').textContent = k.exp;
+  document.getElementById('rec-ok').textContent = k.ok;
+  document.getElementById('rec-miss').textContent = k.miss;
+  document.getElementById('rec-extra').textContent = k.extra;
+  const pct = k.exp ? Math.min(100, Math.round(k.ok/k.exp*100)) : 0;
+  document.getElementById('rec-prog').style.width = pct + '%';
+}
+
+/* ============================================================
+   LOG DE BIPES (por sessão, em memória)
+   ============================================================ */
+const LOGS = { 'log-exp': [], 'log-rec': [] };
+function logScan(host, id, kind) {
+  LOGS[host].unshift({ id, kind, t: Date.now() });
+  if (LOGS[host].length > 60) LOGS[host].pop();
+  const tagMap = { add:['ok','ADICIONADO'], ok:['ok','CONFERIDO'], dup:['extra','DUPLICADO'], extra:['extra','NÃO ESPERADO'] };
+  document.getElementById(host).innerHTML =
+    '<table><tbody>' + LOGS[host].map(r => {
+      const [cls,txt] = tagMap[r.kind] || ['exp',r.kind];
+      return `<tr><td class="mono">${esc(r.id)}</td><td><span class="tag ${cls}">${txt}</span></td>
+        <td class="mono" style="color:var(--text3);text-align:right">${new Date(r.t).toLocaleTimeString('pt-BR')}</td></tr>`;
+    }).join('') + '</tbody></table>';
+}
+
+/* ============================================================
+   CONFERÊNCIA
+   ============================================================ */
+function renderConferencia() {
+  fillCargaSelect('carga-conf', document.getElementById('carga-conf').value);
+  const cid = document.getElementById('carga-conf').value;
+  const body = document.getElementById('conf-body');
+  const c = STATE.cargas[cid];
+  document.getElementById('sel-conf').classList.toggle('none', !cid);
+  if (!c) { body.innerHTML = '<div class="card"><div class="empty">Selecione uma carga para ver a conferência.</div></div>'; return; }
+  const exp = c.expedidos || {}, rec = c.recebidos || {}, k = counts(c);
+  const missList = Object.keys(exp).filter(id => rec[id]===undefined).sort();
+  const extraList = Object.keys(rec).filter(id => exp[id]===undefined).sort();
+  const status = k.miss===0 && k.extra===0 && k.exp>0 ? 'ok' : 'div';
+
+  body.innerHTML = `
+    <div class="card">
+      <h2>${esc(c.nome)} ${statusTag(c.status)}</h2>
+      <p class="hint mono">${c.criada_turno||''}</p>
+      <div class="stat-grid">
+        <div class="stat"><div class="n">${k.exp}</div><div class="l">Esperados EMG23</div></div>
+        <div class="stat"><div class="n">${k.rec}</div><div class="l">Recebidos SMG15</div></div>
+        <div class="stat ok"><div class="n">${k.ok}</div><div class="l">Conferidos</div></div>
+        <div class="stat miss"><div class="n">${k.miss}</div><div class="l">Faltando</div></div>
+        <div class="stat extra"><div class="n">${k.extra}</div><div class="l">Não esperados</div></div>
+      </div>
+      <div style="margin-top:14px">${
+        status==='ok' ? '<span class="tag ok" style="font-size:14px;padding:6px 14px">✅ CONFERÊNCIA OK — tudo bate</span>'
+        : `<span class="tag miss" style="font-size:14px;padding:6px 14px">⚠️ ${k.miss+k.extra} divergência(s)</span>`
+      }</div>
+    </div>
+    <div class="card">
+      <h2 style="color:var(--red)">Faltando — bipado no EMG23, não chegou no SMG15 (${missList.length})</h2>
+      ${missList.length ? '<table><tbody>'+missList.map(id=>`<tr><td class="mono">${esc(id)}</td><td><span class="tag miss">FALTANDO</span></td></tr>`).join('')+'</tbody></table>' : '<div class="empty">Nenhum faltando 🎉</div>'}
+    </div>
+    <div class="card">
+      <h2 style="color:#a85d00">Não esperados — chegou no SMG15, não estava no EMG23 (${extraList.length})</h2>
+      ${extraList.length ? '<table><tbody>'+extraList.map(id=>`<tr><td class="mono">${esc(id)}</td><td><span class="tag extra">NÃO ESPERADO</span></td></tr>`).join('')+'</tbody></table>' : '<div class="empty">Nenhum não-esperado</div>'}
+    </div>`;
+}
+function exportConf() {
+  const cid = document.getElementById('carga-conf').value;
+  const c = STATE.cargas[cid];
+  if (!c) return toast('Selecione uma carga');
+  const exp = c.expedidos || {}, rec = c.recebidos || {};
+  const ids = new Set([...Object.keys(exp), ...Object.keys(rec)]);
+  const rows = [['id_devolucao','expedido_emg23','recebido_smg15','status']];
+  [...ids].sort().forEach(id => {
+    const e = exp[id]!==undefined, r = rec[id]!==undefined;
+    const st = e&&r ? 'CONFERIDO' : e ? 'FALTANDO' : 'NAO_ESPERADO';
+    rows.push([id, e?'sim':'nao', r?'sim':'nao', st]);
+  });
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `conferencia_${(c.nome||'carga').replace(/[^\w]+/g,'_')}.csv`;
+  a.click();
+  toast('CSV exportado');
+}
+
+/* ============================================================
+   RENDER GERAL (reage a mudanças do Firebase)
+   ============================================================ */
+function renderAll() {
+  fillCargaSelect('carga-expedir', SEL.expedir);
+  fillCargaSelect('carga-receber', SEL.receber);
+  // reaplica seleção salva
+  if (SEL.expedir && STATE.cargas[SEL.expedir]) setCargaExpedirLite(SEL.expedir); else setCargaExpedirLite('');
+  if (SEL.receber && STATE.cargas[SEL.receber]) setCargaReceberLite(SEL.receber); else setCargaReceberLite('');
+  renderExpedir(); renderReceber();
+  if (document.getElementById('page-conferencia').classList.contains('active')) renderConferencia();
+  if (document.getElementById('page-cargas').classList.contains('active')) renderCargas();
+}
+// versões "lite": só atualizam estado visual sem re-focar/re-toast
+function setCargaExpedirLite(id) {
+  document.getElementById('carga-expedir').value = id;
+  const inp = document.getElementById('scan-exp'), sel = document.getElementById('sel-expedir');
+  inp.disabled = !id; sel.classList.toggle('none', !id);
+  const c = STATE.cargas[id];
+  document.getElementById('carga-expedir-info').textContent = c ? statusTxt(c) : '';
+}
+function setCargaReceberLite(id) {
+  document.getElementById('carga-receber').value = id;
+  const inp = document.getElementById('scan-rec'), sel = document.getElementById('sel-receber');
+  inp.disabled = !id; sel.classList.toggle('none', !id);
+  const c = STATE.cargas[id];
+  document.getElementById('carga-receber-info').textContent = c ? statusTxt(c) : '';
+}
+
+renderAll();
+</script>
+</body>
+</html>
