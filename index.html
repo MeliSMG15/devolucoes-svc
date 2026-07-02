@@ -33,10 +33,13 @@ body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', 
 .day-bar .day-nav:hover { border-color: var(--accent); color: var(--text); }
 .day-bar input[type=date] { font-family: 'DM Mono', monospace; font-weight: 600; font-size: 15px; text-align: center; }
 .day-bar .today-tag { font-size: 11px; color: var(--green); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
-.origin-bar { display: flex; justify-content: center; gap: 10px; padding: 10px 20px 8px; background: var(--surface); flex-wrap: wrap; }
-.origin-btn { padding: 12px 30px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); font-family: inherit; font-size: 16px; font-weight: 700; border-radius: 12px; cursor: pointer; letter-spacing: .5px; display: flex; align-items: center; gap: 8px; transition: all .12s; }
-.origin-btn.active { background: var(--meli-blue); color: #fff; border-color: var(--meli-blue); box-shadow: 0 4px 14px rgba(45,50,119,.25); }
-.origin-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+.loc-bar { display: flex; justify-content: center; align-items: center; gap: 10px; padding: 10px 20px 8px; background: var(--surface); flex-wrap: wrap; }
+.loc-btn { padding: 12px 28px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); font-family: inherit; font-size: 16px; font-weight: 700; border-radius: 12px; cursor: pointer; letter-spacing: .5px; display: flex; align-items: center; gap: 8px; transition: all .12s; }
+.loc-btn.active { background: var(--meli-blue); color: #fff; border-color: var(--meli-blue); box-shadow: 0 4px 14px rgba(45,50,119,.25); }
+.loc-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+.loc-btn.smg { color: #00854f; }
+.loc-btn.smg.active { background: var(--green); border-color: var(--green); box-shadow: 0 4px 14px rgba(0,166,80,.28); color: #fff; }
+.loc-div { width: 1px; align-self: stretch; background: var(--border2); margin: 4px 4px; }
 .tabs { display: flex; justify-content: center; gap: 4px; padding: 6px 20px 0; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; }
 .tab { padding: 10px 16px; border: none; background: transparent; color: var(--text2); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 8px 8px 0 0; border-bottom: 3px solid transparent; white-space: nowrap; }
 .tab.active { color: var(--text); border-bottom-color: var(--meli); background: var(--surface2); }
@@ -126,16 +129,21 @@ tr:hover td { background: var(--surface2); }
   <button class="btn sm ghost" onclick="setDia(hojeLocal())">Hoje</button>
   <span class="today-tag" id="hoje-tag"></span>
 </div>
-<div class="origin-bar">
-  <button class="origin-btn active" data-org="EMG23" onclick="setOrigin('EMG23')">📍 EMG23</button>
-  <button class="origin-btn" data-org="EMG37" onclick="setOrigin('EMG37')">📍 EMG37</button>
-  <button class="origin-btn" data-org="EMG26" onclick="setOrigin('EMG26')">📍 EMG26</button>
+<div class="loc-bar">
+  <button class="loc-btn active" data-loc="EMG23" onclick="setLoc('EMG23')">📍 EMG23</button>
+  <button class="loc-btn" data-loc="EMG37" onclick="setLoc('EMG37')">📍 EMG37</button>
+  <button class="loc-btn" data-loc="EMG26" onclick="setLoc('EMG26')">📍 EMG26</button>
+  <span class="loc-div"></span>
+  <button class="loc-btn smg" data-loc="SMG15" onclick="setLoc('SMG15')">🏭 SMG15</button>
 </div>
-<div class="tabs">
+<div class="tabs" id="tabs-emg">
   <button class="tab active" data-sec="expedir" onclick="setSection('expedir')">📤 Expedir</button>
-  <button class="tab" data-sec="receber" onclick="setSection('receber')">📥 SMG15 · Receber</button>
   <button class="tab" data-sec="conferencia" onclick="setSection('conferencia')">✅ Conferência</button>
   <button class="tab" data-sec="cargas" onclick="setSection('cargas')">🚚 Cargas</button>
+</div>
+<div class="tabs" id="tabs-smg" style="display:none">
+  <button class="tab active" data-sec="receber" onclick="setSection('receber')">📥 Receber</button>
+  <button class="tab" data-sec="resumo" onclick="setSection('resumo')">📊 Resumo do dia</button>
 </div>
 
 <div class="wrap">
@@ -187,7 +195,7 @@ tr:hover td { background: var(--surface2); }
 
     <div class="card">
       <h2>Receber e conferir — SMG15</h2>
-      <p class="hint">Selecione a carreta que chegou (só aparecem as <b>finalizadas</b> na origem). Bipe cada pacote recebido: <span class="tag ok">CONFERIDO</span> esperado e ok · <span class="tag extra">NÃO ESPERADO</span> chegou sem ter sido bipado na origem.</p>
+      <p class="hint">Selecione a carreta que chegou — aparecem as <b>finalizadas</b> de todas as origens (EMG23/37/26). Bipe cada pacote recebido: <span class="tag ok">CONFERIDO</span> esperado e ok · <span class="tag extra">NÃO ESPERADO</span> chegou sem ter sido bipado na origem.</p>
       <div class="scan-box">
         <input class="scan-input" id="scan-rec" placeholder="Bipe o pacote recebido…" autocomplete="off" disabled
                onkeydown="if(event.key==='Enter'){event.preventDefault();scanReceber()}">
@@ -212,6 +220,15 @@ tr:hover td { background: var(--surface2); }
       <button class="btn sm ghost" onclick="exportConf()">⬇ Exportar CSV</button>
     </div>
     <div id="conf-body"></div>
+  </div>
+
+  <!-- ====================== RESUMO DO DIA (SMG15) ====================== -->
+  <div class="page" id="page-resumo">
+    <div class="carga-sel none" id="sel-resumo" style="justify-content:space-between">
+      <span><span class="cs-label">Resumo do dia</span> <b id="resumo-dia" class="mono"></b></span>
+      <button class="btn sm ghost" onclick="exportResumo()">⬇ Exportar CSV do dia</button>
+    </div>
+    <div id="resumo-body"></div>
   </div>
 
   <!-- ====================== CARGAS ====================== -->
@@ -257,7 +274,8 @@ firebase.auth().onAuthStateChanged(u => console.log('[auth]', u ? 'logado '+u.ui
    ============================================================ */
 let STATE = { cargas: {} };
 let QUEUE = JSON.parse(localStorage.getItem('dv_queue') || '[]');
-let CUR_ORIGIN = 'EMG23';
+let CUR_LOC = 'EMG23';       // EMG23 | EMG37 | EMG26 | SMG15
+let CUR_ORIGIN = 'EMG23';    // EMG atual (quando CUR_LOC é uma EMG)
 let CUR_SECTION = 'expedir';
 let CUR_DIA = hojeLocal();
 let SEL = { expedir: {}, receber: {}, conf: {} };
@@ -383,13 +401,15 @@ function setFb(id, cls, txt, sub) {
 function sk(){ return CUR_ORIGIN + '|' + CUR_DIA; }
 function selExp(){ return SEL.expedir[sk()] || ''; }
 function setSelExp(id){ SEL.expedir[sk()] = id; localStorage.setItem('dv_sel_exp', JSON.stringify(SEL.expedir)); }
-function selRec(){ return SEL.receber[sk()] || ''; }
-function setSelRec(id){ SEL.receber[sk()] = id; localStorage.setItem('dv_sel_rec', JSON.stringify(SEL.receber)); }
+function selRec(){ return SEL.receber[CUR_DIA] || ''; }         /* SMG15 recebe de todas as origens → por dia */
+function setSelRec(id){ SEL.receber[CUR_DIA] = id; localStorage.setItem('dv_sel_rec', JSON.stringify(SEL.receber)); }
 function selConf(){ return SEL.conf[sk()] || ''; }
 function setSelConf(id){ SEL.conf[sk()] = id; localStorage.setItem('dv_sel_conf', JSON.stringify(SEL.conf)); }
 
-/* pertence à origem+dia atualmente selecionados? */
+/* pertence à origem+dia atuais (contexto EMG)? */
 function inScope(c){ return c.origem === CUR_ORIGIN && cargaDia(c) === CUR_DIA; }
+/* pertence ao dia atual, qualquer origem (contexto SMG15)? */
+function inDay(c){ return cargaDia(c) === CUR_DIA; }
 
 /* ============================================================
    NAVEGAÇÃO — níveis: DIA × EMG (origem) × seção
@@ -407,10 +427,16 @@ function shiftDia(delta) {
   d.setDate(d.getDate() + delta);
   setDia(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
 }
-function setOrigin(o) {
-  CUR_ORIGIN = o;
-  document.querySelectorAll('.origin-btn').forEach(b => b.classList.toggle('active', b.dataset.org === o));
-  renderSection();
+const SECOES = { emg: ['expedir','conferencia','cargas'], smg: ['receber','resumo'] };
+function setLoc(loc) {
+  CUR_LOC = loc;
+  const isEmg = ORIGENS.includes(loc);
+  if (isEmg) CUR_ORIGIN = loc;
+  document.querySelectorAll('.loc-btn').forEach(b => b.classList.toggle('active', b.dataset.loc === loc));
+  document.getElementById('tabs-emg').style.display = isEmg ? '' : 'none';
+  document.getElementById('tabs-smg').style.display = isEmg ? 'none' : '';
+  const secs = isEmg ? SECOES.emg : SECOES.smg;
+  setSection(secs.includes(CUR_SECTION) ? CUR_SECTION : secs[0]);
 }
 function setSection(sec) {
   CUR_SECTION = sec;
@@ -424,6 +450,7 @@ function renderSection() {
   else if (CUR_SECTION === 'receber') initReceber();
   else if (CUR_SECTION === 'conferencia') renderConferencia();
   else if (CUR_SECTION === 'cargas') renderCargas();
+  else if (CUR_SECTION === 'resumo') renderResumo();
 }
 
 /* ============================================================
@@ -516,15 +543,15 @@ function renderExpedir() {
    ============================================================ */
 function initReceber() {
   fillCargaSelect('carga-receber', selRec(),
-    c => inScope(c) && c.status === 'finalizada',
-    c => `${c.placa} · ${counts(c).exp} esperados`);
+    c => inDay(c) && c.status === 'finalizada',
+    c => `${c.origem} · ${c.placa} · ${counts(c).exp} esperados`);
   applyReceberSel();
   setTimeout(() => { const i = document.getElementById('scan-rec'); if (!i.disabled) i.focus(); }, 50);
 }
 function setCargaReceber(id) { setSelRec(id); applyReceberSel(); const i=document.getElementById('scan-rec'); if(!i.disabled) i.focus(); }
 function applyReceberSel() {
   const id = selRec(), c = STATE.cargas[id];
-  const valid = !!(c && inScope(c) && c.status === 'finalizada');
+  const valid = !!(c && inDay(c) && c.status === 'finalizada');
   document.getElementById('carga-receber').value = valid ? id : '';
   document.getElementById('scan-rec').disabled = !valid;
   document.getElementById('sel-receber').classList.toggle('none', !valid);
@@ -683,12 +710,119 @@ function renderCargas() {
 }
 
 /* ============================================================
+   RESUMO DO DIA (SMG15) — consolidado de todas as origens
+   ============================================================ */
+function zero(){ return { carretas:0, exp:0, rec:0, ok:0, miss:0, extra:0 }; }
+function resumoDia() {
+  const arr = cargasArr().filter(inDay);
+  const T = zero(); const byEmg = {};
+  ORIGENS.forEach(o => byEmg[o] = zero());
+  arr.forEach(c => {
+    const k = counts(c), o = c.origem;
+    if (!byEmg[o]) byEmg[o] = zero();
+    const b = byEmg[o];
+    b.carretas++; b.exp += k.exp; b.rec += k.rec; b.ok += k.ok; b.miss += k.miss; b.extra += k.extra;
+    T.carretas++; T.exp += k.exp; T.rec += k.rec; T.ok += k.ok; T.miss += k.miss; T.extra += k.extra;
+  });
+  return { arr, T, byEmg };
+}
+function renderResumo() {
+  document.getElementById('sel-resumo').classList.remove('none');
+  document.getElementById('resumo-dia').textContent = diaLabel(CUR_DIA);
+  const { arr, T, byEmg } = resumoDia();
+  const body = document.getElementById('resumo-body');
+  if (!arr.length) { body.innerHTML = '<div class="card"><div class="empty">Nenhuma carga registrada em '+diaLabel(CUR_DIA)+'.</div></div>'; return; }
+
+  const aguardando = arr.filter(c => c.status === 'finalizada' && counts(c).rec < counts(c).exp).length;
+  const divergentes = arr.filter(c => { const k = counts(c); return k.miss > 0 || k.extra > 0; }).length;
+
+  const emgRows = ORIGENS.filter(o => byEmg[o].carretas > 0).map(o => {
+    const b = byEmg[o];
+    return `<tr>
+      <td><span class="tag org">${o}</span></td>
+      <td class="mono">${b.carretas}</td>
+      <td class="mono">${b.exp}</td>
+      <td class="mono">${b.rec}</td>
+      <td class="mono" style="color:var(--green)">${b.ok}</td>
+      <td class="mono" style="color:var(--red)">${b.miss}</td>
+      <td class="mono" style="color:#a85d00">${b.extra}</td>
+    </tr>`;
+  }).join('');
+
+  const cargaRows = arr.map(c => {
+    const k = counts(c);
+    const pct = k.exp ? Math.round(k.ok/k.exp*100) : (k.rec?100:0);
+    const alerta = (k.miss>0 || k.extra>0);
+    return `<tr style="cursor:pointer${alerta?';background:rgba(230,57,70,.05)':''}" onclick="openConf('${c.id}')">
+      <td><span class="tag org">${esc(c.origem)}</span></td>
+      <td><span class="plate">${esc(c.placa)}</span></td>
+      <td>${statusTag(c.status)}</td>
+      <td class="mono">${k.exp}</td>
+      <td class="mono">${k.rec}</td>
+      <td class="mono" style="color:var(--green)">${k.ok}</td>
+      <td class="mono" style="color:var(--red)">${k.miss}</td>
+      <td class="mono" style="color:#a85d00">${k.extra}</td>
+      <td style="min-width:90px"><div class="prog" style="margin-top:0"><i style="width:${pct}%"></i></div></td>
+    </tr>`;
+  }).join('');
+
+  body.innerHTML = `
+    <div class="card">
+      <h2>Totais do dia · todas as origens</h2>
+      <div class="stat-grid">
+        <div class="stat big"><div class="n">${T.exp}</div><div class="l">Devoluções esperadas</div></div>
+        <div class="stat"><div class="n">${T.rec}</div><div class="l">Recebidas</div></div>
+        <div class="stat ok"><div class="n">${T.ok}</div><div class="l">Conferidas</div></div>
+        <div class="stat miss"><div class="n">${T.miss}</div><div class="l">Faltando</div></div>
+        <div class="stat extra"><div class="n">${T.extra}</div><div class="l">Não esperados</div></div>
+        <div class="stat"><div class="n">${T.carretas}</div><div class="l">Carretas</div></div>
+        <div class="stat"><div class="n" style="color:var(--accent)">${aguardando}</div><div class="l">Aguardando receber</div></div>
+        <div class="stat"><div class="n" style="color:${divergentes?'var(--red)':'var(--green)'}">${divergentes}</div><div class="l">Com divergência</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Por origem</h2>
+      <table><thead><tr>
+        <th>Origem</th><th>Carretas</th><th>Esperados</th><th>Recebidos</th><th>Conf.</th><th>Falta</th><th>Não esp.</th>
+      </tr></thead><tbody>${emgRows}</tbody></table>
+    </div>
+    <div class="card">
+      <h2>Carretas do dia <span class="route-note">(clique pra ver a conferência)</span></h2>
+      <table><thead><tr>
+        <th>Origem</th><th>Placa</th><th>Status</th><th>Exp.</th><th>Rec.</th><th>Conf.</th><th>Falta</th><th>Não esp.</th><th>Progresso</th>
+      </tr></thead><tbody>${cargaRows}</tbody></table>
+    </div>`;
+}
+function openConf(id) {
+  const c = STATE.cargas[id]; if (!c) return;
+  setLoc(c.origem);          // vai pra EMG da carreta
+  setSelConf(id);
+  setSection('conferencia');
+}
+function exportResumo() {
+  const { arr } = resumoDia();
+  if (!arr.length) return toast('Nada pra exportar neste dia');
+  const rows = [['dia','origem','placa','status','esperados','recebidos','conferidos','faltando','nao_esperados']];
+  arr.forEach(c => {
+    const k = counts(c);
+    rows.push([CUR_DIA, c.origem, c.placa, c.status, k.exp, k.rec, k.ok, k.miss, k.extra]);
+  });
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `resumo_devolucoes_${CUR_DIA}.csv`;
+  a.click();
+  toast('CSV do dia exportado');
+}
+
+/* ============================================================
    RENDER GERAL (reage a mudanças do Firebase)
    ============================================================ */
 function renderAll() { renderSection(); }
 
 setDia(CUR_DIA);
-setOrigin('EMG23');
+setLoc('EMG23');
 setSection('expedir');
 </script>
 </body>
