@@ -28,7 +28,12 @@ body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', 
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
 .dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
 .dot.off { background: var(--red); }
-.origin-bar { display: flex; justify-content: center; gap: 10px; padding: 16px 20px 8px; background: var(--surface); flex-wrap: wrap; }
+.day-bar { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 14px 20px 4px; background: var(--surface); flex-wrap: wrap; }
+.day-bar .day-nav { width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); font-size: 18px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.day-bar .day-nav:hover { border-color: var(--accent); color: var(--text); }
+.day-bar input[type=date] { font-family: 'DM Mono', monospace; font-weight: 600; font-size: 15px; text-align: center; }
+.day-bar .today-tag { font-size: 11px; color: var(--green); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+.origin-bar { display: flex; justify-content: center; gap: 10px; padding: 10px 20px 8px; background: var(--surface); flex-wrap: wrap; }
 .origin-btn { padding: 12px 30px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); font-family: inherit; font-size: 16px; font-weight: 700; border-radius: 12px; cursor: pointer; letter-spacing: .5px; display: flex; align-items: center; gap: 8px; transition: all .12s; }
 .origin-btn.active { background: var(--meli-blue); color: #fff; border-color: var(--meli-blue); box-shadow: 0 4px 14px rgba(45,50,119,.25); }
 .origin-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
@@ -114,6 +119,13 @@ tr:hover td { background: var(--surface2); }
   </div>
 </div>
 
+<div class="day-bar">
+  <button class="day-nav" onclick="shiftDia(-1)" title="Dia anterior">‹</button>
+  <input type="date" id="dia-input" onchange="setDia(this.value)">
+  <button class="day-nav" onclick="shiftDia(1)" title="Próximo dia">›</button>
+  <button class="btn sm ghost" onclick="setDia(hojeLocal())">Hoje</button>
+  <span class="today-tag" id="hoje-tag"></span>
+</div>
 <div class="origin-bar">
   <button class="origin-btn active" data-org="EMG23" onclick="setOrigin('EMG23')">📍 EMG23</button>
   <button class="origin-btn" data-org="EMG37" onclick="setOrigin('EMG37')">📍 EMG37</button>
@@ -247,6 +259,7 @@ let STATE = { cargas: {} };
 let QUEUE = JSON.parse(localStorage.getItem('dv_queue') || '[]');
 let CUR_ORIGIN = 'EMG23';
 let CUR_SECTION = 'expedir';
+let CUR_DIA = hojeLocal();
 let SEL = { expedir: {}, receber: {}, conf: {} };
 try { SEL.expedir = JSON.parse(localStorage.getItem('dv_sel_exp') || '{}'); } catch(e){ SEL.expedir = {}; }
 try { SEL.receber = JSON.parse(localStorage.getItem('dv_sel_rec') || '{}'); } catch(e){ SEL.receber = {}; }
@@ -256,7 +269,21 @@ const TURNO = turnoAtual();
 function turnoAtual() {
   const d = new Date(), h = d.getHours();
   const t = h < 12 ? 'T1' : h < 18 ? 'T2' : 'T3';
-  return `${d.toISOString().slice(0,10)}-${t}`;
+  return `${hojeLocal()}-${t}`;
+}
+function hojeLocal() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function cargaDia(c) {
+  if (c.dia) return c.dia;
+  if (c.criada_em) { const d = new Date(c.criada_em); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  return '';
+}
+function diaLabel(iso) {
+  if (!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
 }
 document.getElementById('turno-pill').textContent = 'turno ' + TURNO;
 
@@ -344,18 +371,34 @@ function setFb(id, cls, txt, sub) {
   el.innerHTML = txt + (sub?`<div class="scan-sub">${sub}</div>`:'');
 }
 
-/* seleção de carga por origem, em cada seção */
-function selExp(){ return SEL.expedir[CUR_ORIGIN] || ''; }
-function setSelExp(id){ SEL.expedir[CUR_ORIGIN] = id; localStorage.setItem('dv_sel_exp', JSON.stringify(SEL.expedir)); }
-function selRec(){ return SEL.receber[CUR_ORIGIN] || ''; }
-function setSelRec(id){ SEL.receber[CUR_ORIGIN] = id; localStorage.setItem('dv_sel_rec', JSON.stringify(SEL.receber)); }
-function selConf(){ return SEL.conf[CUR_ORIGIN] || ''; }
-function setSelConf(id){ SEL.conf[CUR_ORIGIN] = id; localStorage.setItem('dv_sel_conf', JSON.stringify(SEL.conf)); }
+/* seleção de carga por origem × dia, em cada seção */
+function sk(){ return CUR_ORIGIN + '|' + CUR_DIA; }
+function selExp(){ return SEL.expedir[sk()] || ''; }
+function setSelExp(id){ SEL.expedir[sk()] = id; localStorage.setItem('dv_sel_exp', JSON.stringify(SEL.expedir)); }
+function selRec(){ return SEL.receber[sk()] || ''; }
+function setSelRec(id){ SEL.receber[sk()] = id; localStorage.setItem('dv_sel_rec', JSON.stringify(SEL.receber)); }
+function selConf(){ return SEL.conf[sk()] || ''; }
+function setSelConf(id){ SEL.conf[sk()] = id; localStorage.setItem('dv_sel_conf', JSON.stringify(SEL.conf)); }
+
+/* pertence à origem+dia atualmente selecionados? */
+function inScope(c){ return c.origem === CUR_ORIGIN && cargaDia(c) === CUR_DIA; }
 
 /* ============================================================
-   NAVEGAÇÃO — 2 níveis: EMG (origem) × seção
-   Toda seção é filtrada pela origem atual (CUR_ORIGIN).
+   NAVEGAÇÃO — níveis: DIA × EMG (origem) × seção
+   Toda seção é filtrada pelo dia e origem atuais.
    ============================================================ */
+function setDia(iso) {
+  if (!iso) return;
+  CUR_DIA = iso;
+  document.getElementById('dia-input').value = iso;
+  document.getElementById('hoje-tag').textContent = (iso === hojeLocal()) ? '● hoje' : '';
+  renderSection();
+}
+function shiftDia(delta) {
+  const d = new Date(CUR_DIA + 'T12:00:00');
+  d.setDate(d.getDate() + delta);
+  setDia(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
+}
 function setOrigin(o) {
   CUR_ORIGIN = o;
   document.querySelectorAll('.origin-btn').forEach(b => b.classList.toggle('active', b.dataset.org === o));
@@ -389,9 +432,9 @@ function fillCargaSelect(elId, selected, filterFn, labelFn) {
    EXPEDIÇÃO (EMG23 / EMG37 / EMG26)
    ============================================================ */
 function initExpedir() {
-  document.getElementById('exp-title').textContent = 'Expedição · ' + CUR_ORIGIN;
+  document.getElementById('exp-title').textContent = 'Expedição · ' + CUR_ORIGIN + ' · ' + diaLabel(CUR_DIA);
   fillCargaSelect('carga-expedir', selExp(),
-    c => c.origem === CUR_ORIGIN && c.status === 'aberta',
+    c => inScope(c) && c.status === 'aberta',
     c => `${c.placa} · ${counts(c).exp} bipados`);
   applyExpedirSel();
   setTimeout(() => { const i = document.getElementById('scan-exp'); if (!i.disabled) i.focus(); }, 50);
@@ -399,8 +442,8 @@ function initExpedir() {
 function abrirCarga() {
   const placa = normPlaca(document.getElementById('nova-placa').value);
   if (!placa) return toast('Digite a placa da carreta');
-  // reaproveita carga aberta com a mesma placa/origem
-  const existente = cargasArr().find(c => c.origem === CUR_ORIGIN && c.status === 'aberta' && c.placa === placa);
+  // reaproveita carga aberta com a mesma placa/origem/dia
+  const existente = cargasArr().find(c => inScope(c) && c.status === 'aberta' && c.placa === placa);
   if (existente) {
     setSelExp(existente.id);
     document.getElementById('nova-placa').value = '';
@@ -408,16 +451,16 @@ function abrirCarga() {
     initExpedir(); return;
   }
   const id = 'C' + Date.now().toString(36);
-  writeData('cargas/'+id, { placa, origem: CUR_ORIGIN, status: 'aberta', criada_em: Date.now(), criada_turno: TURNO, expedidos: {}, recebidos: {} });
+  writeData('cargas/'+id, { placa, origem: CUR_ORIGIN, dia: CUR_DIA, status: 'aberta', criada_em: Date.now(), criada_turno: TURNO, expedidos: {}, recebidos: {} });
   setSelExp(id);
   document.getElementById('nova-placa').value = '';
-  toast(`Carga ${placa} aberta · ${CUR_ORIGIN}`);
+  toast(`Carga ${placa} aberta · ${CUR_ORIGIN} · ${diaLabel(CUR_DIA)}`);
   initExpedir();
 }
 function setCargaExpedir(id) { setSelExp(id); applyExpedirSel(); const i=document.getElementById('scan-exp'); if(!i.disabled) i.focus(); }
 function applyExpedirSel() {
   const id = selExp(), c = STATE.cargas[id];
-  const valid = !!(c && c.status === 'aberta');
+  const valid = !!(c && inScope(c) && c.status === 'aberta');
   document.getElementById('carga-expedir').value = valid ? id : '';
   document.getElementById('scan-exp').disabled = !valid;
   document.getElementById('btn-finalizar').disabled = !valid;
@@ -465,7 +508,7 @@ function renderExpedir() {
    ============================================================ */
 function initReceber() {
   fillCargaSelect('carga-receber', selRec(),
-    c => c.origem === CUR_ORIGIN && c.status === 'finalizada',
+    c => inScope(c) && c.status === 'finalizada',
     c => `${c.placa} · ${counts(c).exp} esperados`);
   applyReceberSel();
   setTimeout(() => { const i = document.getElementById('scan-rec'); if (!i.disabled) i.focus(); }, 50);
@@ -473,7 +516,7 @@ function initReceber() {
 function setCargaReceber(id) { setSelRec(id); applyReceberSel(); const i=document.getElementById('scan-rec'); if(!i.disabled) i.focus(); }
 function applyReceberSel() {
   const id = selRec(), c = STATE.cargas[id];
-  const valid = !!(c && c.origem === CUR_ORIGIN && c.status === 'finalizada');
+  const valid = !!(c && inScope(c) && c.status === 'finalizada');
   document.getElementById('carga-receber').value = valid ? id : '';
   document.getElementById('scan-rec').disabled = !valid;
   document.getElementById('sel-receber').classList.toggle('none', !valid);
@@ -537,7 +580,7 @@ function logScan(host, id, kind) {
 function setCargaConf(id) { setSelConf(id); renderConferencia(); }
 function renderConferencia() {
   fillCargaSelect('carga-conf', selConf(),
-    c => c.origem === CUR_ORIGIN, c => `${c.placa}`);
+    c => inScope(c), c => `${c.placa}`);
   const cid = document.getElementById('carga-conf').value;
   const body = document.getElementById('conf-body');
   const c = STATE.cargas[cid];
@@ -579,17 +622,17 @@ function exportConf() {
   if (!c) return toast('Selecione uma carga');
   const exp = c.expedidos || {}, rec = c.recebidos || {};
   const ids = new Set([...Object.keys(exp), ...Object.keys(rec)]);
-  const rows = [['origem','placa','id_devolucao','expedido','recebido','status']];
+  const rows = [['dia','origem','placa','id_devolucao','expedido','recebido','status']];
   [...ids].sort().forEach(id => {
     const e = exp[id]!==undefined, r = rec[id]!==undefined;
     const st = e&&r ? 'CONFERIDO' : e ? 'FALTANDO' : 'NAO_ESPERADO';
-    rows.push([c.origem, c.placa, id, e?'sim':'nao', r?'sim':'nao', st]);
+    rows.push([cargaDia(c), c.origem, c.placa, id, e?'sim':'nao', r?'sim':'nao', st]);
   });
   const csv = rows.map(r=>r.join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `conferencia_${c.origem}_${(c.placa||'carga').replace(/[^\w]+/g,'_')}.csv`;
+  a.download = `conferencia_${cargaDia(c)}_${c.origem}_${(c.placa||'carga').replace(/[^\w]+/g,'_')}.csv`;
   a.click();
   toast('CSV exportado');
 }
@@ -607,8 +650,8 @@ function delCarga(id) {
 }
 function renderCargas() {
   const host = document.getElementById('cargas-list');
-  const arr = cargasArr().filter(c => c.origem === CUR_ORIGIN);
-  if (!arr.length) { host.innerHTML = '<div class="empty">Nenhuma carga aberta ainda em '+CUR_ORIGIN+'. Abra uma na aba Expedir.</div>'; return; }
+  const arr = cargasArr().filter(inScope);
+  if (!arr.length) { host.innerHTML = '<div class="empty">Nenhuma carga em '+CUR_ORIGIN+' no dia '+diaLabel(CUR_DIA)+'. Abra uma na aba Expedir.</div>'; return; }
   host.innerHTML = `<table><thead><tr>
     <th>Placa</th><th>Status</th><th>Exp.</th><th>Rec.</th><th>Conf.</th><th>Falta</th><th>Não esp.</th><th></th>
   </tr></thead><tbody>` + arr.map(c => {
@@ -636,6 +679,7 @@ function renderCargas() {
    ============================================================ */
 function renderAll() { renderSection(); }
 
+setDia(CUR_DIA);
 setOrigin('EMG23');
 setSection('expedir');
 </script>
