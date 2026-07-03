@@ -186,6 +186,9 @@ tr:hover td { background: var(--surface2); }
 
     <div class="card">
       <h2>Bipar IDs de devolução</h2>
+      <label class="fld" style="margin-bottom:14px">Operador <span style="color:var(--red)">*</span> <span class="route-note" style="font-weight:400">quem está bipando</span>
+        <input id="op-exp" placeholder="Seu nome" autocomplete="off" oninput="onOpExp()" style="max-width:300px">
+      </label>
       <div class="scan-box">
         <input class="scan-input" id="scan-exp" placeholder="Bipe o ID de devolução…" autocomplete="off" disabled
                onkeydown="if(event.key==='Enter'){event.preventDefault();scanExpedir()}">
@@ -209,6 +212,9 @@ tr:hover td { background: var(--surface2); }
     <div class="card">
       <h2>Receber e conferir — SMG15</h2>
       <p class="hint">Selecione a carreta que chegou — aparecem as <b>finalizadas</b> de todas as origens (EMG23/37/26). Bipe cada pacote recebido: <span class="tag ok">CONFERIDO</span> esperado e ok · <span class="tag extra">NÃO ESPERADO</span> chegou sem ter sido bipado na origem.</p>
+      <label class="fld" style="margin-bottom:14px">Operador <span style="color:var(--red)">*</span> <span class="route-note" style="font-weight:400">quem está bipando</span>
+        <input id="op-rec" placeholder="Seu nome" autocomplete="off" oninput="onOpRec()" style="max-width:300px">
+      </label>
       <div class="scan-box">
         <input class="scan-input" id="scan-rec" placeholder="Bipe o pacote recebido…" autocomplete="off" disabled
                onkeydown="if(event.key==='Enter'){event.preventDefault();scanReceber()}">
@@ -397,6 +403,13 @@ function normId(s) {
 function normPlaca(s) { return String(s||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,''); }
 function fbKey(s) { return String(s).replace(/[.#$/\[\]]/g,'_'); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+/* valor de um bipe pode ser número (dados antigos) ou {t,op} (com operador) */
+function entryTs(v){ return (v && typeof v === 'object') ? v.t : v; }
+function entryOp(v){ return (v && typeof v === 'object') ? (v.op || '') : ''; }
+function opExp(){ return (document.getElementById('op-exp').value || '').trim(); }
+function opRec(){ return (document.getElementById('op-rec').value || '').trim(); }
+function onOpExp(){ localStorage.setItem('dv_op_exp', opExp()); applyExpedirSel(); }
+function onOpRec(){ localStorage.setItem('dv_op_rec', opRec()); applyReceberSel(); }
 function beep(ok) {
   try {
     const ctx = new (window.AudioContext||window.webkitAudioContext)();
@@ -541,29 +554,32 @@ function abrirCarga() {
 function setCargaExpedir(id) { setSelExp(id); applyExpedirSel(); const i=document.getElementById('scan-exp'); if(!i.disabled) i.focus(); }
 function applyExpedirSel() {
   const id = selExp(), c = STATE.cargas[id];
-  const valid = !!(c && inScope(c) && c.status === 'aberta');
-  document.getElementById('carga-expedir').value = valid ? id : '';
+  const cargaOk = !!(c && inScope(c) && c.status === 'aberta');
+  const valid = cargaOk && !!opExp();
+  document.getElementById('carga-expedir').value = cargaOk ? id : '';
   document.getElementById('scan-exp').disabled = !valid;
-  document.getElementById('btn-finalizar').disabled = !valid;
-  document.getElementById('sel-expedir').classList.toggle('none', !valid);
-  document.getElementById('carga-expedir-info').innerHTML = valid ? `<span class="plate">${esc(c.placa)}</span> · ${counts(c).exp} bipados` : '';
-  if (!valid) { setSelExp(''); setFb('fb-exp','fb-idle','Abra ou selecione uma carga para começar'); }
+  document.getElementById('btn-finalizar').disabled = !cargaOk;
+  document.getElementById('sel-expedir').classList.toggle('none', !cargaOk);
+  document.getElementById('carga-expedir-info').innerHTML = cargaOk ? `<span class="plate">${esc(c.placa)}</span> · ${counts(c).exp} bipados` : '';
+  if (!cargaOk) { setSelExp(''); setFb('fb-exp','fb-idle','Abra ou selecione uma carga para começar'); }
+  else if (!opExp()) setFb('fb-exp','fb-warn','⚠️ Informe o operador', 'Digite o nome de quem está bipando');
   else setFb('fb-exp','fb-idle','Pronto — bipe os IDs');
   renderExpedir();
-  renderExpList(valid ? c : null);
+  renderExpList(cargaOk ? c : null);
 }
 function scanExpedir() {
   const inp = document.getElementById('scan-exp');
   const id = normId(inp.value); inp.value=''; inp.focus();
   if (!id) return;
+  if (!opExp()) { setFb('fb-exp','fb-warn','⚠️ Informe o operador', 'Digite o nome de quem está bipando'); return; }
   const cid = selExp(), c = STATE.cargas[cid];
   if (!c || c.status !== 'aberta') { setFb('fb-exp','fb-err','Carga não está aberta'); return; }
   const key = fbKey(id);
   if ((c.expedidos||{})[key] !== undefined) {
     beep(false); setFb('fb-exp','fb-warn','⚠️ JÁ BIPADO', id + ' já está nesta carga'); return;
   }
-  writeData(`cargas/${cid}/expedidos/${key}`, Date.now());
-  beep(true); setFb('fb-exp','fb-ok','✅ ADICIONADO', id);
+  writeData(`cargas/${cid}/expedidos/${key}`, { t: Date.now(), op: opExp() });
+  beep(true); setFb('fb-exp','fb-ok','✅ ADICIONADO', id + ' · ' + opExp());
   renderExpedir(); renderExpList(c);
 }
 function finalizarBipagem() {
@@ -594,21 +610,24 @@ function initReceber() {
 function setCargaReceber(id) { setSelRec(id); applyReceberSel(); const i=document.getElementById('scan-rec'); if(!i.disabled) i.focus(); }
 function applyReceberSel() {
   const id = selRec(), c = STATE.cargas[id];
-  const valid = !!(c && inDay(c) && c.status === 'finalizada');
-  document.getElementById('carga-receber').value = valid ? id : '';
+  const cargaOk = !!(c && inDay(c) && c.status === 'finalizada');
+  const valid = cargaOk && !!opRec();
+  document.getElementById('carga-receber').value = cargaOk ? id : '';
   document.getElementById('scan-rec').disabled = !valid;
-  document.getElementById('sel-receber').classList.toggle('none', !valid);
-  document.getElementById('carga-receber-info').innerHTML = valid ? `<span class="tag org">${esc(c.origem)}</span> <span class="plate">${esc(c.placa)}</span>` : '';
-  if (!valid) { setSelRec(''); setFb('fb-rec','fb-idle','Selecione uma carga para começar'); }
+  document.getElementById('sel-receber').classList.toggle('none', !cargaOk);
+  document.getElementById('carga-receber-info').innerHTML = cargaOk ? `<span class="tag org">${esc(c.origem)}</span> <span class="plate">${esc(c.placa)}</span>` : '';
+  if (!cargaOk) { setSelRec(''); setFb('fb-rec','fb-idle','Selecione uma carga para começar'); }
+  else if (!opRec()) setFb('fb-rec','fb-warn','⚠️ Informe o operador', 'Digite o nome de quem está bipando');
   else setFb('fb-rec','fb-idle','Pronto — bipe os pacotes');
   renderReceber();
-  renderFaltantes(valid ? c : null);
-  renderRecList(valid ? c : null);
+  renderFaltantes(cargaOk ? c : null);
+  renderRecList(cargaOk ? c : null);
 }
 function scanReceber() {
   const inp = document.getElementById('scan-rec');
   const id = normId(inp.value); inp.value=''; inp.focus();
   if (!id) return;
+  if (!opRec()) { setFb('fb-rec','fb-warn','⚠️ Informe o operador', 'Digite o nome de quem está bipando'); return; }
   const cid = selRec(), c = STATE.cargas[cid];
   if (!c || c.status !== 'finalizada') { setFb('fb-rec','fb-err','Selecione uma carga finalizada'); return; }
   const exp = c.expedidos || {}, rec = c.recebidos || {};
@@ -616,9 +635,9 @@ function scanReceber() {
   if (rec[key] !== undefined) {
     beep(false); setFb('fb-rec','fb-warn','⚠️ JÁ RECEBIDO', id + ' já foi bipado no recebimento'); return;
   }
-  writeData(`cargas/${cid}/recebidos/${key}`, Date.now());
+  writeData(`cargas/${cid}/recebidos/${key}`, { t: Date.now(), op: opRec() });
   if (exp[key] !== undefined) {
-    beep(true); setFb('fb-rec','fb-ok','✅ CONFERIDO', id);
+    beep(true); setFb('fb-rec','fb-ok','✅ CONFERIDO', id + ' · ' + opRec());
   } else {
     beep(false); setFb('fb-rec','fb-warn','⚠️ NÃO ESPERADO', id + ' — não foi bipado na origem');
   }
@@ -642,12 +661,13 @@ function renderReceber() {
 function renderExpList(c) {
   const host = document.getElementById('log-exp');
   const exp = (c && c.expedidos) || {};
-  const arr = Object.entries(exp).sort((a,b) => b[1]-a[1]);
+  const arr = Object.entries(exp).sort((a,b) => entryTs(b[1])-entryTs(a[1]));
   if (!arr.length) { host.innerHTML = ''; return; }
   host.innerHTML = `<h2 style="font-size:14px;margin:8px 0 8px">IDs bipados (${arr.length}) <span class="route-note">— ✏️ corrige, 🗑️ remove</span></h2>
-    <table><tbody>` + arr.map(([k,ts]) => `<tr>
+    <table><tbody>` + arr.map(([k,v]) => `<tr>
       <td class="mono">${esc(k)}</td>
-      <td class="mono" style="color:var(--text3)">${new Date(ts).toLocaleTimeString('pt-BR')}</td>
+      <td>${entryOp(v)?`<span class="route-note">👤 ${esc(entryOp(v))}</span>`:''}</td>
+      <td class="mono" style="color:var(--text3)">${new Date(entryTs(v)).toLocaleTimeString('pt-BR')}</td>
       <td style="text-align:right;white-space:nowrap">
         <button class="btn sm ghost" onclick="editExpId('${esc(k)}')">✏️</button>
         <button class="btn sm red" onclick="delExpId('${esc(k)}')">🗑️</button>
@@ -661,8 +681,8 @@ function editExpId(oldKey) {
   if (!nk) return toast('ID inválido');
   if (nk === oldKey) return;
   if ((c.expedidos||{})[nk] !== undefined) return toast('Esse ID já está na carga');
-  const ts = (c.expedidos||{})[oldKey];
-  writeData(`cargas/${cid}/expedidos/${nk}`, ts !== undefined ? ts : Date.now());
+  const old = (c.expedidos||{})[oldKey];
+  writeData(`cargas/${cid}/expedidos/${nk}`, old !== undefined ? old : { t: Date.now(), op: opExp() });
   writeData(`cargas/${cid}/expedidos/${oldKey}`, null);
   toast(`Corrigido: ${oldKey} → ${nk}`);
   applyExpedirSel();
@@ -679,15 +699,16 @@ function delExpId(key) {
 function renderRecList(c) {
   const host = document.getElementById('log-rec');
   const exp = (c && c.expedidos) || {}, rec = (c && c.recebidos) || {};
-  const arr = Object.entries(rec).sort((a,b) => b[1]-a[1]);
+  const arr = Object.entries(rec).sort((a,b) => entryTs(b[1])-entryTs(a[1]));
   if (!arr.length) { host.innerHTML = ''; return; }
   host.innerHTML = `<h2 style="font-size:14px;margin:8px 0 8px">Recebidos (${arr.length}) <span class="route-note">— ✏️ corrige, 🗑️ remove</span></h2>
-    <table><tbody>` + arr.map(([k,ts]) => {
+    <table><tbody>` + arr.map(([k,v]) => {
       const ok = exp[k] !== undefined;
       return `<tr>
         <td class="mono">${esc(k)}</td>
         <td><span class="tag ${ok?'ok':'extra'}">${ok?'CONFERIDO':'NÃO ESPERADO'}</span></td>
-        <td class="mono" style="color:var(--text3)">${new Date(ts).toLocaleTimeString('pt-BR')}</td>
+        <td>${entryOp(v)?`<span class="route-note">👤 ${esc(entryOp(v))}</span>`:''}</td>
+        <td class="mono" style="color:var(--text3)">${new Date(entryTs(v)).toLocaleTimeString('pt-BR')}</td>
         <td style="text-align:right;white-space:nowrap">
           <button class="btn sm ghost" onclick="editRecId('${esc(k)}')">✏️</button>
           <button class="btn sm red" onclick="delRecId('${esc(k)}')">🗑️</button>
@@ -715,8 +736,8 @@ function editRecId(oldKey) {
   if (!nk) return toast('ID inválido');
   if (nk === oldKey) return;
   if ((c.recebidos||{})[nk] !== undefined) return toast('Esse ID já foi recebido');
-  const ts = (c.recebidos||{})[oldKey];
-  writeData(`cargas/${cid}/recebidos/${nk}`, ts !== undefined ? ts : Date.now());
+  const old = (c.recebidos||{})[oldKey];
+  writeData(`cargas/${cid}/recebidos/${nk}`, old !== undefined ? old : { t: Date.now(), op: opRec() });
   writeData(`cargas/${cid}/recebidos/${oldKey}`, null);
   toast(`Corrigido: ${oldKey} → ${nk}`);
   applyReceberSel();
@@ -777,11 +798,11 @@ function exportConf() {
   if (!c) return toast('Selecione uma carga');
   const exp = c.expedidos || {}, rec = c.recebidos || {};
   const ids = new Set([...Object.keys(exp), ...Object.keys(rec)]);
-  const rows = [['dia','origem','placa','id_devolucao','expedido','recebido','status']];
+  const rows = [['dia','origem','placa','id_devolucao','expedido','recebido','status','expedido_por','recebido_por']];
   [...ids].sort().forEach(id => {
     const e = exp[id]!==undefined, r = rec[id]!==undefined;
     const st = e&&r ? 'CONFERIDO' : e ? 'FALTANDO' : 'NAO_ESPERADO';
-    rows.push([cargaDia(c), c.origem, c.placa, id, e?'sim':'nao', r?'sim':'nao', st]);
+    rows.push([cargaDia(c), c.origem, c.placa, id, e?'sim':'nao', r?'sim':'nao', st, entryOp(exp[id]), entryOp(rec[id])]);
   });
   const csv = rows.map(r=>r.join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv'});
@@ -945,7 +966,7 @@ function exportIdsDia() {
     const ids = new Set([...Object.keys(exp), ...Object.keys(rec)]);
     ids.forEach(id => {
       const e = exp[id] !== undefined, r = rec[id] !== undefined;
-      const base = { dia: CUR_DIA, origem: c.origem, placa: c.placa, id };
+      const base = { dia: CUR_DIA, origem: c.origem, placa: c.placa, id, exp_por: entryOp(exp[id]), rec_por: entryOp(rec[id]) };
       if (e && r) conf.push({ ...base, status: 'CONFERIDO' });
       else if (e) falt.push({ ...base, status: 'FALTANTE' });
       else nesp.push({ ...base, status: 'NAO_ESPERADO' });
@@ -953,8 +974,8 @@ function exportIdsDia() {
   });
   const sortId = (a,b) => a.id.localeCompare(b.id);
   const linhas = [...conf.sort(sortId), ...falt.sort(sortId), ...nesp.sort(sortId)];
-  const rows = [['dia','origem','placa','id_devolucao','status']];
-  linhas.forEach(l => rows.push([l.dia, l.origem, l.placa, l.id, l.status]));
+  const rows = [['dia','origem','placa','id_devolucao','status','expedido_por','recebido_por']];
+  linhas.forEach(l => rows.push([l.dia, l.origem, l.placa, l.id, l.status, l.exp_por, l.rec_por]));
   const csv = rows.map(r=>r.join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv'});
   const a = document.createElement('a');
@@ -969,6 +990,8 @@ function exportIdsDia() {
    ============================================================ */
 function renderAll() { renderSection(); }
 
+document.getElementById('op-exp').value = localStorage.getItem('dv_op_exp') || '';
+document.getElementById('op-rec').value = localStorage.getItem('dv_op_rec') || '';
 setDia(CUR_DIA);
 setLoc('EMG23');
 setSection('expedir');
