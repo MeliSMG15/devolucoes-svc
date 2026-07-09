@@ -111,19 +111,32 @@ tr:hover td { background: var(--surface2); }
 .route-note { font-size: 12px; color: var(--text3); }
 .falt-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .falt-chip { background: rgba(230,57,70,.1); border: 1px solid var(--red); color: #c0283a; padding: 5px 12px; border-radius: 8px; font-size: 14px; font-weight: 600; }
+.inv-open { background: #7b3fe4; }
+.inv-open:hover { background: #6a30cf; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(35,42,71,.55); z-index: 500; display: flex; align-items: flex-start; justify-content: center; padding: 30px 16px; overflow-y: auto; }
+.modal-box { background: var(--bg); border-radius: 16px; width: 100%; max-width: 840px; box-shadow: 0 24px 70px rgba(0,0,0,.4); overflow: hidden; }
+.modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 22px; background: var(--surface); border-bottom: 1px solid var(--border); border-top: 4px solid #7b3fe4; position: sticky; top: 0; z-index: 2; }
+.modal-head h2 { font-size: 18px; }
+.modal-close { border: none; background: var(--surface2); color: var(--text2); width: 38px; height: 38px; border-radius: 9px; font-size: 18px; cursor: pointer; }
+.modal-close:hover { background: var(--red); color: #fff; }
+.modal-body { padding: 20px; }
+.modal-body .card:last-child { margin-bottom: 0; }
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <div class="brand">
-    <div class="brand-icon">
-      <svg width="24" height="24" viewBox="0 0 40 40"><path d="M22 8 L12 8 A6 6 0 0 0 6 14 L6 26 A6 6 0 0 0 12 32 L28 32 A6 6 0 0 0 34 26 L34 20" stroke="#2D3277" stroke-width="3.2" stroke-linecap="round" fill="none"/><path d="M28 6 L34 12 L28 18" stroke="#2D3277" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="24" height="24" viewBox="0 0 40 40"><path d="M22 8 L12 8 A6 6 0 0 0 6 14 L6 26 A6 6 0 0 0 12 32 L28 32 A6 6 0 0 0 34 26 L34 20" stroke="#2D3277" stroke-width="3.2" stroke-linecap="round" fill="none"/><path d="M28 6 L34 12 L28 18" stroke="#2D3277" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">Conferência de Devoluções</div>
+        <div class="brand-sub">EMG23 · EMG37 · EMG26 → SMG15</div>
+      </div>
     </div>
-    <div>
-      <div class="brand-name">Conferência de Devoluções</div>
-      <div class="brand-sub">EMG23 · EMG37 · EMG26 → SMG15</div>
-    </div>
+    <button class="btn inv-open" onclick="openInv()">📦 Realizar inventário</button>
   </div>
   <div class="topbar-right">
     <span class="pill" id="turno-pill">turno —</span>
@@ -150,8 +163,6 @@ tr:hover td { background: var(--surface2); }
   <button class="loc-btn" data-loc="EMG26" onclick="setLoc('EMG26')">📍 EMG26</button>
   <span class="loc-div"></span>
   <button class="loc-btn smg" data-loc="SMG15" onclick="setLoc('SMG15')">🏭 SMG15</button>
-  <span class="loc-div"></span>
-  <button class="loc-btn inv" data-loc="INV" onclick="setLoc('INV')">📦 Realizar inventário</button>
 </div>
 <div class="tabs" id="tabs-emg">
   <button class="tab active" data-sec="expedir" onclick="setSection('expedir')">📤 Expedir</button>
@@ -270,35 +281,6 @@ tr:hover td { background: var(--surface2); }
     </div>
   </div>
 
-  <!-- ====================== INVENTÁRIO (realizar) ====================== -->
-  <div class="page" id="page-inventario">
-    <div class="card">
-      <h2>📦 Realizar inventário</h2>
-      <p class="hint">Escolha a <b>EMG</b> e o <b>operador</b>, e bipe os pacotes em sequência (número puro ou QR — o app pega só o ID). Os IDs ficam disponíveis pro <b>SMG15</b> analisar e baixar.</p>
-      <div class="row">
-        <label class="fld">EMG <span style="color:var(--red)">*</span>
-          <select id="inv-emg" onchange="onInvEmg()" style="min-width:160px"></select>
-        </label>
-        <label class="fld">
-          <span>Operador <span style="color:var(--red)">*</span> <span class="route-note" style="font-weight:400">— quem está bipando</span></span>
-          <input id="op-inv" placeholder="Seu nome" autocomplete="off" oninput="onOpInv()" style="max-width:300px">
-        </label>
-      </div>
-    </div>
-    <div class="card">
-      <h2>Bipar pacotes</h2>
-      <div class="scan-box">
-        <input class="scan-input" id="scan-inv" placeholder="Bipe o pacote…" autocomplete="off" disabled
-               onkeydown="if(event.key==='Enter'){event.preventDefault();scanInv()}">
-        <div class="scan-feedback fb-idle" id="fb-inv">Selecione EMG e operador para começar</div>
-      </div>
-      <div class="stat-grid" style="margin-top:8px">
-        <div class="stat big"><div class="n" id="inv-total">0</div><div class="l">Bipados (EMG · dia)</div></div>
-      </div>
-      <div class="scan-log" id="log-inv"></div>
-    </div>
-  </div>
-
   <!-- ====================== INVENTÁRIO (análise SMG15) ====================== -->
   <div class="page" id="page-invsmg">
     <div class="carga-sel none" id="sel-invsmg" style="justify-content:space-between">
@@ -308,6 +290,42 @@ tr:hover td { background: var(--surface2); }
     <div id="invsmg-body"></div>
   </div>
 
+</div>
+
+<!-- ====================== INVENTÁRIO (modal por cima da tela) ====================== -->
+<div class="modal-overlay" id="inv-modal" style="display:none" onclick="if(event.target===this)closeInv()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>📦 Realizar inventário</h2>
+      <button class="modal-close" onclick="closeInv()" title="Fechar">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="card">
+        <p class="hint" style="margin-bottom:16px">Escolha a <b>EMG</b> e o <b>operador</b>, e bipe os pacotes em sequência (número puro ou QR — o app pega só o ID). Os IDs ficam disponíveis pro <b>SMG15</b> analisar e baixar.</p>
+        <div class="row">
+          <label class="fld">EMG <span style="color:var(--red)">*</span>
+            <select id="inv-emg" onchange="onInvEmg()" style="min-width:160px"></select>
+          </label>
+          <label class="fld">
+            <span>Operador <span style="color:var(--red)">*</span> <span class="route-note" style="font-weight:400">— quem está bipando</span></span>
+            <input id="op-inv" placeholder="Seu nome" autocomplete="off" oninput="onOpInv()" style="max-width:300px">
+          </label>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Bipar pacotes</h2>
+        <div class="scan-box">
+          <input class="scan-input" id="scan-inv" placeholder="Bipe o pacote…" autocomplete="off" disabled
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();scanInv()}">
+          <div class="scan-feedback fb-idle" id="fb-inv">Selecione EMG e operador para começar</div>
+        </div>
+        <div class="stat-grid" style="margin-top:8px">
+          <div class="stat big"><div class="n" id="inv-total">0</div><div class="l">Bipados (EMG · dia)</div></div>
+        </div>
+        <div class="scan-log" id="log-inv"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="toast-host"></div>
@@ -540,13 +558,6 @@ function setLoc(loc) {
   document.querySelectorAll('.loc-btn').forEach(b => b.classList.toggle('active', b.dataset.loc === loc));
   document.getElementById('tabs-emg').style.display = isEmg ? '' : 'none';
   document.getElementById('tabs-smg').style.display = (loc === 'SMG15') ? '' : 'none';
-  if (loc === 'INV') {   // inventário não tem sub-abas
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('page-inventario').classList.add('active');
-    CUR_SECTION = 'inventario';
-    renderInventario();
-    return;
-  }
   const secs = isEmg ? SECOES.emg : SECOES.smg;
   setSection(secs.includes(CUR_SECTION) ? CUR_SECTION : secs[0]);
 }
@@ -563,7 +574,6 @@ function renderSection() {
   else if (CUR_SECTION === 'conferencia') renderConferencia();
   else if (CUR_SECTION === 'cargas') renderCargas();
   else if (CUR_SECTION === 'resumo') renderResumo();
-  else if (CUR_SECTION === 'inventario') renderInventario();
   else if (CUR_SECTION === 'invsmg') renderInvSMG();
 }
 
@@ -1050,6 +1060,14 @@ function invItems(){ const d = (STATE.inventarios||{})[CUR_DIA] || {}; return d[
 function onInvEmg(){ localStorage.setItem('dv_inv_emg', invEmg()); applyInv(); const i=document.getElementById('scan-inv'); if(!i.disabled) i.focus(); }
 function onOpInv(){ localStorage.setItem('dv_op_inv', opInv()); applyInv(); }
 
+function invModalOpen(){ return document.getElementById('inv-modal').style.display !== 'none'; }
+function openInv() {
+  document.getElementById('inv-modal').style.display = 'flex';
+  renderInventario();
+}
+function closeInv() { document.getElementById('inv-modal').style.display = 'none'; }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && invModalOpen()) closeInv(); });
+
 function renderInventario() {
   const sel = document.getElementById('inv-emg');
   if (sel.options.length <= 1) {
@@ -1180,7 +1198,7 @@ function exportInv() {
 /* ============================================================
    RENDER GERAL (reage a mudanças do Firebase)
    ============================================================ */
-function renderAll() { renderSection(); }
+function renderAll() { renderSection(); if (invModalOpen()) { renderInvTotal(); renderInvList(); } }
 
 document.getElementById('op-exp').value = localStorage.getItem('dv_op_exp') || '';
 document.getElementById('op-rec').value = localStorage.getItem('dv_op_rec') || '';
