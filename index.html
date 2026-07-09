@@ -283,9 +283,16 @@ tr:hover td { background: var(--surface2); }
 
   <!-- ====================== INVENTÁRIO (análise SMG15) ====================== -->
   <div class="page" id="page-invsmg">
-    <div class="carga-sel none" id="sel-invsmg" style="justify-content:space-between">
-      <span><span class="cs-label">Inventário do dia</span> <b id="invsmg-dia" class="mono"></b></span>
-      <button class="btn sm" onclick="exportInv()">⬇ Baixar IDs do inventário</button>
+    <div class="carga-sel none" id="sel-invsmg" style="justify-content:space-between;gap:14px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="cs-label">Inventário</span>
+        <label class="fld" style="flex-direction:row;align-items:center;gap:6px;font-size:12px">De <input type="date" id="inv-de" onchange="setInvRange()"></label>
+        <label class="fld" style="flex-direction:row;align-items:center;gap:6px;font-size:12px">Até <input type="date" id="inv-ate" onchange="setInvRange()"></label>
+        <button class="btn sm ghost" onclick="invPreset('hoje')">Hoje</button>
+        <button class="btn sm ghost" onclick="invPreset('7d')">7 dias</button>
+        <button class="btn sm ghost" onclick="invPreset('semana')">Semana</button>
+      </div>
+      <button class="btn sm" onclick="exportInv()">⬇ Baixar IDs</button>
     </div>
     <div id="invsmg-body"></div>
   </div>
@@ -364,6 +371,8 @@ let CUR_LOC = 'EMG23';       // EMG23 | EMG37 | EMG26 | SMG15
 let CUR_ORIGIN = 'EMG23';    // EMG atual (quando CUR_LOC é uma EMG)
 let CUR_SECTION = 'expedir';
 let CUR_DIA = hojeLocal();
+let INV_DE = localStorage.getItem('dv_inv_de') || hojeLocal();   // filtro do inventário SMG15
+let INV_ATE = localStorage.getItem('dv_inv_ate') || hojeLocal();
 let SEL = { expedir: {}, receber: {}, conf: {} };
 try { SEL.expedir = JSON.parse(localStorage.getItem('dv_sel_exp') || '{}'); } catch(e){ SEL.expedir = {}; }
 try { SEL.receber = JSON.parse(localStorage.getItem('dv_sel_rec') || '{}'); } catch(e){ SEL.receber = {}; }
@@ -1138,34 +1147,78 @@ function delInvId(key) {
   toast('ID removido');
   renderInvTotal(); renderInvList();
 }
-// SMG15 — análise consolidada do inventário do dia
+// SMG15 — análise consolidada do inventário por intervalo de datas
+function addDias(iso, n) { const d = new Date(iso+'T12:00:00'); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function setInvRange() {
+  let de = document.getElementById('inv-de').value, ate = document.getElementById('inv-ate').value;
+  de = de || ate || hojeLocal(); ate = ate || de;
+  if (de > ate) { const t = de; de = ate; ate = t; }   // corrige se inverteu
+  INV_DE = de; INV_ATE = ate;
+  document.getElementById('inv-de').value = de;
+  document.getElementById('inv-ate').value = ate;
+  localStorage.setItem('dv_inv_de', de); localStorage.setItem('dv_inv_ate', ate);
+  renderInvSMG();
+}
+function invPreset(kind) {
+  const hoje = hojeLocal();
+  if (kind === 'hoje') { INV_DE = hoje; INV_ATE = hoje; }
+  else if (kind === '7d') { INV_ATE = hoje; INV_DE = addDias(hoje, -6); }
+  else if (kind === 'semana') { const dow = (new Date(hoje+'T12:00:00').getDay()+6)%7; INV_DE = addDias(hoje, -dow); INV_ATE = addDias(INV_DE, 6); }
+  document.getElementById('inv-de').value = INV_DE;
+  document.getElementById('inv-ate').value = INV_ATE;
+  localStorage.setItem('dv_inv_de', INV_DE); localStorage.setItem('dv_inv_ate', INV_ATE);
+  renderInvSMG();
+}
+function invRangeDias() { return Object.keys(STATE.inventarios||{}).filter(d => d >= INV_DE && d <= INV_ATE).sort(); }
+function invRangeItems() {   // {dia,emg,id,op,t}
+  const invs = STATE.inventarios || {}, all = [];
+  invRangeDias().forEach(dia => {
+    const byEmg = invs[dia] || {};
+    Object.keys(byEmg).forEach(emg => {
+      const items = byEmg[emg] || {};
+      Object.keys(items).forEach(id => all.push({ dia, emg, id, op: entryOp(items[id]), t: entryTs(items[id]) }));
+    });
+  });
+  return all;
+}
 function renderInvSMG() {
   document.getElementById('sel-invsmg').classList.remove('none');
-  document.getElementById('invsmg-dia').textContent = diaLabel(CUR_DIA);
-  const dia = (STATE.inventarios||{})[CUR_DIA] || {};
+  document.getElementById('inv-de').value = INV_DE;
+  document.getElementById('inv-ate').value = INV_ATE;
   const body = document.getElementById('invsmg-body');
-  let total = 0; const porEmg = []; const all = [];
-  const emgs = [...ORIGENS, ...Object.keys(dia).filter(o => !ORIGENS.includes(o))];
-  emgs.forEach(o => {
-    const items = dia[o] || {}; const ks = Object.keys(items);
-    if (!ks.length) return;
-    total += ks.length; porEmg.push({ emg:o, n:ks.length });
-    ks.forEach(k => all.push({ emg:o, id:k, op:entryOp(items[k]), t:entryTs(items[k]) }));
+  const all = invRangeItems();
+  const rangeLabel = INV_DE === INV_ATE ? diaLabel(INV_DE) : `${diaLabel(INV_DE)} → ${diaLabel(INV_ATE)}`;
+  if (!all.length) { body.innerHTML = '<div class="card"><div class="empty">Nenhum inventário registrado em '+rangeLabel+'.</div></div>'; return; }
+
+  const porEmg = {}, porDia = {};
+  all.forEach(it => {
+    porEmg[it.emg] = (porEmg[it.emg]||0) + 1;
+    porDia[it.dia] = (porDia[it.dia]||0) + 1;
   });
-  if (!total) { body.innerHTML = '<div class="card"><div class="empty">Nenhum inventário registrado em '+diaLabel(CUR_DIA)+'.</div></div>'; return; }
-  all.sort((a,b) => a.emg === b.emg ? a.id.localeCompare(b.id) : a.emg.localeCompare(b.emg));
+  const emgKeys = [...ORIGENS.filter(o => porEmg[o]), ...Object.keys(porEmg).filter(o => !ORIGENS.includes(o))];
+  all.sort((a,b) => a.dia !== b.dia ? a.dia.localeCompare(b.dia) : (a.emg !== b.emg ? a.emg.localeCompare(b.emg) : a.id.localeCompare(b.id)));
+
+  const porDiaRows = Object.keys(porDia).sort().map(d =>
+    `<tr><td class="mono">${diaLabel(d)}</td><td class="mono">${porDia[d]}</td></tr>`).join('');
+
   body.innerHTML = `
     <div class="card">
-      <h2>Totais do inventário · ${diaLabel(CUR_DIA)}</h2>
+      <h2>Totais do inventário · ${rangeLabel}</h2>
       <div class="stat-grid">
-        <div class="stat big"><div class="n">${total}</div><div class="l">Total de IDs</div></div>
-        ${porEmg.map(r => `<div class="stat"><div class="n">${r.n}</div><div class="l">${esc(r.emg)}</div></div>`).join('')}
+        <div class="stat big"><div class="n">${all.length}</div><div class="l">Total de IDs</div></div>
+        ${emgKeys.map(o => `<div class="stat"><div class="n">${porEmg[o]}</div><div class="l">${esc(o)}</div></div>`).join('')}
+        <div class="stat"><div class="n">${Object.keys(porDia).length}</div><div class="l">Dias com registro</div></div>
       </div>
     </div>
     <div class="card">
+      <h2>Por dia</h2>
+      <table><thead><tr><th>Dia</th><th>IDs</th></tr></thead><tbody>${porDiaRows}</tbody></table>
+    </div>
+    <div class="card">
       <h2>IDs do inventário (${all.length})</h2>
-      <table><thead><tr><th>EMG</th><th>ID</th><th>Operador</th><th>Hora</th></tr></thead><tbody>`+
+      <table><thead><tr><th>Dia</th><th>EMG</th><th>ID</th><th>Operador</th><th>Hora</th></tr></thead><tbody>`+
       all.map(it => `<tr>
+        <td class="mono">${diaLabel(it.dia)}</td>
         <td><span class="tag org">${esc(it.emg)}</span></td>
         <td class="mono">${esc(it.id)}</td>
         <td>${it.op?esc(it.op):''}</td>
@@ -1174,25 +1227,18 @@ function renderInvSMG() {
     </div>`;
 }
 function exportInv() {
-  const dia = (STATE.inventarios||{})[CUR_DIA] || {};
+  const all = invRangeItems();
+  if (!all.length) return toast('Nada pra exportar neste período');
+  all.sort((a,b) => a.dia !== b.dia ? a.dia.localeCompare(b.dia) : (a.emg !== b.emg ? a.emg.localeCompare(b.emg) : a.id.localeCompare(b.id)));
   const rows = [['dia','emg','id','operador','hora']];
-  let n = 0;
-  Object.keys(dia).forEach(emg => {
-    const items = dia[emg] || {};
-    Object.keys(items).sort().forEach(id => {
-      const v = items[id], t = entryTs(v);
-      rows.push([CUR_DIA, emg, id, entryOp(v), t ? new Date(t).toLocaleString('pt-BR') : '']);
-      n++;
-    });
-  });
-  if (!n) return toast('Nada pra exportar neste dia');
+  all.forEach(it => rows.push([it.dia, it.emg, it.id, it.op, it.t ? new Date(it.t).toLocaleString('pt-BR') : '']));
   const csv = rows.map(r=>r.join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `inventario_${CUR_DIA}.csv`;
+  a.download = INV_DE === INV_ATE ? `inventario_${INV_DE}.csv` : `inventario_${INV_DE}_a_${INV_ATE}.csv`;
   a.click();
-  toast(n + ' IDs do inventário exportados');
+  toast(all.length + ' IDs do inventário exportados');
 }
 
 /* ============================================================
