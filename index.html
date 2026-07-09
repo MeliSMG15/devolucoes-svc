@@ -288,9 +288,11 @@ tr:hover td { background: var(--surface2); }
         <span class="cs-label">Inventário</span>
         <label class="fld" style="flex-direction:row;align-items:center;gap:6px;font-size:12px">De <input type="date" id="inv-de" onchange="setInvRange()"></label>
         <label class="fld" style="flex-direction:row;align-items:center;gap:6px;font-size:12px">Até <input type="date" id="inv-ate" onchange="setInvRange()"></label>
+        <label class="fld" style="flex-direction:row;align-items:center;gap:6px;font-size:12px">Semana
+          <select id="inv-week" onchange="setInvWeek(this.value)" style="min-width:170px"></select>
+        </label>
         <button class="btn sm ghost" onclick="invPreset('hoje')">Hoje</button>
         <button class="btn sm ghost" onclick="invPreset('7d')">7 dias</button>
-        <button class="btn sm ghost" onclick="invPreset('semana')">Semana</button>
       </div>
       <button class="btn sm" onclick="exportInv()">⬇ Baixar IDs</button>
     </div>
@@ -1148,7 +1150,35 @@ function delInvId(key) {
   renderInvTotal(); renderInvList();
 }
 // SMG15 — análise consolidada do inventário por intervalo de datas
-function addDias(iso, n) { const d = new Date(iso+'T12:00:00'); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function addDias(iso, n) { const d = new Date(iso+'T12:00:00'); d.setDate(d.getDate()+n); return isoOf(d); }
+function isoOf(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function ddmm(iso) { const p = iso.split('-'); return p[2]+'/'+p[1]; }
+/* semana domingo→sábado; W1 = semana do 1º domingo do ano */
+function sundayOf(iso) { const d = new Date(iso+'T12:00:00'); d.setDate(d.getDate()-d.getDay()); return d; }
+function firstSundayOfYear(year) { const d = new Date(year,0,1,12,0,0); d.setDate(d.getDate() + ((7-d.getDay())%7)); return d; }
+function weekInfo(iso) {
+  const ws = sundayOf(iso);
+  let year = ws.getFullYear(), fs = firstSundayOfYear(year);
+  if (ws < fs) { year -= 1; fs = firstSundayOfYear(year); }
+  const wn = Math.round((ws - fs)/(7*86400000)) + 1;
+  return { wn, year, sunday: isoOf(ws) };
+}
+function fillWeekSelect() {
+  const sel = document.getElementById('inv-week');
+  const curSun = sundayOf(hojeLocal()), opts = [];
+  for (let i = -20; i <= 1; i++) {
+    const d = new Date(curSun); d.setDate(d.getDate() + i*7);
+    const iso = isoOf(d), info = weekInfo(iso), sat = addDias(iso, 6);
+    opts.push(`<option value="${iso}">W${info.wn} · ${ddmm(iso)}–${ddmm(sat)}</option>`);
+  }
+  sel.innerHTML = '<option value="">— escolher —</option>' + opts.reverse().join('');
+}
+function setInvWeek(iso) {
+  if (!iso) return;
+  INV_DE = iso; INV_ATE = addDias(iso, 6);
+  localStorage.setItem('dv_inv_de', INV_DE); localStorage.setItem('dv_inv_ate', INV_ATE);
+  renderInvSMG();
+}
 function setInvRange() {
   let de = document.getElementById('inv-de').value, ate = document.getElementById('inv-ate').value;
   de = de || ate || hojeLocal(); ate = ate || de;
@@ -1183,11 +1213,18 @@ function invRangeItems() {   // {dia,emg,id,op,t}
 }
 function renderInvSMG() {
   document.getElementById('sel-invsmg').classList.remove('none');
+  const wsel = document.getElementById('inv-week');
+  if (wsel.options.length <= 1) fillWeekSelect();
   document.getElementById('inv-de').value = INV_DE;
   document.getElementById('inv-ate').value = INV_ATE;
+  // se o intervalo é uma semana cheia (dom→sáb), marca no seletor de semana
+  const info = weekInfo(INV_DE);
+  const semanaCheia = (info.sunday === INV_DE && INV_ATE === addDias(INV_DE, 6));
+  wsel.value = semanaCheia ? INV_DE : '';
   const body = document.getElementById('invsmg-body');
   const all = invRangeItems();
-  const rangeLabel = INV_DE === INV_ATE ? diaLabel(INV_DE) : `${diaLabel(INV_DE)} → ${diaLabel(INV_ATE)}`;
+  const rangeLabel = INV_DE === INV_ATE ? diaLabel(INV_DE)
+    : `${semanaCheia ? 'W'+info.wn+' · ' : ''}${diaLabel(INV_DE)} → ${diaLabel(INV_ATE)}`;
   if (!all.length) { body.innerHTML = '<div class="card"><div class="empty">Nenhum inventário registrado em '+rangeLabel+'.</div></div>'; return; }
 
   const porEmg = {}, porDia = {};
@@ -1236,7 +1273,10 @@ function exportInv() {
   const blob = new Blob([csv], {type:'text/csv'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = INV_DE === INV_ATE ? `inventario_${INV_DE}.csv` : `inventario_${INV_DE}_a_${INV_ATE}.csv`;
+  const info = weekInfo(INV_DE);
+  const semanaCheia = info.sunday === INV_DE && INV_ATE === addDias(INV_DE, 6);
+  a.download = INV_DE === INV_ATE ? `inventario_${INV_DE}.csv`
+    : (semanaCheia ? `inventario_W${info.wn}_${INV_DE}_a_${INV_ATE}.csv` : `inventario_${INV_DE}_a_${INV_ATE}.csv`);
   a.click();
   toast(all.length + ' IDs do inventário exportados');
 }
