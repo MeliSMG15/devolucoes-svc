@@ -45,6 +45,8 @@ body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', 
 .loc-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
 .loc-btn.smg { color: #00854f; }
 .loc-btn.smg.active { background: var(--green); border-color: var(--green); box-shadow: 0 4px 14px rgba(0,166,80,.28); color: #fff; }
+.loc-btn.inv { color: #7b3fe4; }
+.loc-btn.inv.active { background: #7b3fe4; border-color: #7b3fe4; box-shadow: 0 4px 14px rgba(123,63,228,.28); color: #fff; }
 .loc-div { width: 1px; align-self: stretch; background: var(--border2); margin: 4px 4px; }
 .tabs { display: flex; justify-content: center; gap: 4px; padding: 6px 20px 0; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; }
 .tab { padding: 10px 16px; border: none; background: transparent; color: var(--text2); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 8px 8px 0 0; border-bottom: 3px solid transparent; white-space: nowrap; }
@@ -148,6 +150,8 @@ tr:hover td { background: var(--surface2); }
   <button class="loc-btn" data-loc="EMG26" onclick="setLoc('EMG26')">📍 EMG26</button>
   <span class="loc-div"></span>
   <button class="loc-btn smg" data-loc="SMG15" onclick="setLoc('SMG15')">🏭 SMG15</button>
+  <span class="loc-div"></span>
+  <button class="loc-btn inv" data-loc="INV" onclick="setLoc('INV')">📦 Realizar inventário</button>
 </div>
 <div class="tabs" id="tabs-emg">
   <button class="tab active" data-sec="expedir" onclick="setSection('expedir')">📤 Expedir</button>
@@ -157,6 +161,7 @@ tr:hover td { background: var(--surface2); }
 <div class="tabs" id="tabs-smg" style="display:none">
   <button class="tab active" data-sec="receber" onclick="setSection('receber')">📥 Receber</button>
   <button class="tab" data-sec="resumo" onclick="setSection('resumo')">📊 Resumo do dia</button>
+  <button class="tab" data-sec="invsmg" onclick="setSection('invsmg')">📦 Inventário</button>
 </div>
 
 <div class="wrap">
@@ -265,6 +270,44 @@ tr:hover td { background: var(--surface2); }
     </div>
   </div>
 
+  <!-- ====================== INVENTÁRIO (realizar) ====================== -->
+  <div class="page" id="page-inventario">
+    <div class="card">
+      <h2>📦 Realizar inventário</h2>
+      <p class="hint">Escolha a <b>EMG</b> e o <b>operador</b>, e bipe os pacotes em sequência (número puro ou QR — o app pega só o ID). Os IDs ficam disponíveis pro <b>SMG15</b> analisar e baixar.</p>
+      <div class="row">
+        <label class="fld">EMG <span style="color:var(--red)">*</span>
+          <select id="inv-emg" onchange="onInvEmg()" style="min-width:160px"></select>
+        </label>
+        <label class="fld">
+          <span>Operador <span style="color:var(--red)">*</span> <span class="route-note" style="font-weight:400">— quem está bipando</span></span>
+          <input id="op-inv" placeholder="Seu nome" autocomplete="off" oninput="onOpInv()" style="max-width:300px">
+        </label>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Bipar pacotes</h2>
+      <div class="scan-box">
+        <input class="scan-input" id="scan-inv" placeholder="Bipe o pacote…" autocomplete="off" disabled
+               onkeydown="if(event.key==='Enter'){event.preventDefault();scanInv()}">
+        <div class="scan-feedback fb-idle" id="fb-inv">Selecione EMG e operador para começar</div>
+      </div>
+      <div class="stat-grid" style="margin-top:8px">
+        <div class="stat big"><div class="n" id="inv-total">0</div><div class="l">Bipados (EMG · dia)</div></div>
+      </div>
+      <div class="scan-log" id="log-inv"></div>
+    </div>
+  </div>
+
+  <!-- ====================== INVENTÁRIO (análise SMG15) ====================== -->
+  <div class="page" id="page-invsmg">
+    <div class="carga-sel none" id="sel-invsmg" style="justify-content:space-between">
+      <span><span class="cs-label">Inventário do dia</span> <b id="invsmg-dia" class="mono"></b></span>
+      <button class="btn sm" onclick="exportInv()">⬇ Baixar IDs do inventário</button>
+    </div>
+    <div id="invsmg-body"></div>
+  </div>
+
 </div>
 
 <div id="toast-host"></div>
@@ -297,7 +340,7 @@ firebase.auth().onAuthStateChanged(u => console.log('[auth]', u ? 'logado '+u.ui
    cargas[id] = { placa, origem, status(aberta|finalizada|fechada),
                   criada_em, criada_turno, expedidos:{[pkg]:ts}, recebidos:{[pkg]:ts} }
    ============================================================ */
-let STATE = { cargas: {} };
+let STATE = { cargas: {}, inventarios: {} };
 let QUEUE = JSON.parse(localStorage.getItem('dv_queue') || '[]');
 let CUR_LOC = 'EMG23';       // EMG23 | EMG37 | EMG26 | SMG15
 let CUR_ORIGIN = 'EMG23';    // EMG atual (quando CUR_LOC é uma EMG)
@@ -377,6 +420,7 @@ function reapplyQueue() {
   });
 }
 db.ref(`${ROOT}/cargas`).on('value', snap => { STATE.cargas = snap.val() || {}; reapplyQueue(); cacheState(); renderAll(); });
+db.ref(`${ROOT}/inventarios`).on('value', snap => { STATE.inventarios = snap.val() || {}; reapplyQueue(); cacheState(); renderAll(); });
 
 /* ============================================================
    HELPERS
@@ -488,14 +532,21 @@ function shiftDia(delta) {
   d.setDate(d.getDate() + delta);
   setDia(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
 }
-const SECOES = { emg: ['expedir','conferencia','cargas'], smg: ['receber','resumo'] };
+const SECOES = { emg: ['expedir','conferencia','cargas'], smg: ['receber','resumo','invsmg'] };
 function setLoc(loc) {
   CUR_LOC = loc;
   const isEmg = ORIGENS.includes(loc);
   if (isEmg) CUR_ORIGIN = loc;
   document.querySelectorAll('.loc-btn').forEach(b => b.classList.toggle('active', b.dataset.loc === loc));
   document.getElementById('tabs-emg').style.display = isEmg ? '' : 'none';
-  document.getElementById('tabs-smg').style.display = isEmg ? 'none' : '';
+  document.getElementById('tabs-smg').style.display = (loc === 'SMG15') ? '' : 'none';
+  if (loc === 'INV') {   // inventário não tem sub-abas
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-inventario').classList.add('active');
+    CUR_SECTION = 'inventario';
+    renderInventario();
+    return;
+  }
   const secs = isEmg ? SECOES.emg : SECOES.smg;
   setSection(secs.includes(CUR_SECTION) ? CUR_SECTION : secs[0]);
 }
@@ -512,6 +563,8 @@ function renderSection() {
   else if (CUR_SECTION === 'conferencia') renderConferencia();
   else if (CUR_SECTION === 'cargas') renderCargas();
   else if (CUR_SECTION === 'resumo') renderResumo();
+  else if (CUR_SECTION === 'inventario') renderInventario();
+  else if (CUR_SECTION === 'invsmg') renderInvSMG();
 }
 
 /* ============================================================
@@ -988,12 +1041,150 @@ function exportIdsDia() {
 }
 
 /* ============================================================
+   INVENTÁRIO — realizar (por EMG × dia) + análise no SMG15
+   inventarios/{dia}/{emg}/{key} = {t, op}
+   ============================================================ */
+function invEmg(){ return document.getElementById('inv-emg').value; }
+function opInv(){ return (document.getElementById('op-inv').value || '').trim(); }
+function invItems(){ const d = (STATE.inventarios||{})[CUR_DIA] || {}; return d[invEmg()] || {}; }
+function onInvEmg(){ localStorage.setItem('dv_inv_emg', invEmg()); applyInv(); const i=document.getElementById('scan-inv'); if(!i.disabled) i.focus(); }
+function onOpInv(){ localStorage.setItem('dv_op_inv', opInv()); applyInv(); }
+
+function renderInventario() {
+  const sel = document.getElementById('inv-emg');
+  if (sel.options.length <= 1) {
+    sel.innerHTML = '<option value="">— selecione —</option>' + ORIGENS.map(o => `<option value="${o}">${o}</option>`).join('');
+    const savedEmg = localStorage.getItem('dv_inv_emg') || '';
+    if (savedEmg) sel.value = savedEmg;
+  }
+  applyInv();
+  setTimeout(() => { const i = document.getElementById('scan-inv'); if (!i.disabled) i.focus(); }, 50);
+}
+function applyInv() {
+  const emg = invEmg(), op = opInv();
+  document.getElementById('scan-inv').disabled = !(emg && op);
+  if (!emg) setFb('fb-inv','fb-idle','Selecione a EMG e o operador para começar');
+  else if (!op) setFb('fb-inv','fb-warn','⚠️ Informe o operador','Digite o nome de quem está bipando');
+  else setFb('fb-inv','fb-idle','Pronto — bipe os pacotes de ' + emg);
+  renderInvTotal(); renderInvList();
+}
+function renderInvTotal(){ document.getElementById('inv-total').textContent = invEmg() ? Object.keys(invItems()).length : 0; }
+function scanInv() {
+  const inp = document.getElementById('scan-inv');
+  const id = normId(inp.value); inp.value=''; inp.focus();
+  if (!id) return;
+  const emg = invEmg(), op = opInv();
+  if (!emg) { setFb('fb-inv','fb-err','Selecione a EMG'); return; }
+  if (!op) { setFb('fb-inv','fb-warn','⚠️ Informe o operador','Digite o nome de quem está bipando'); return; }
+  const key = fbKey(id);
+  if (invItems()[key] !== undefined) {
+    beep(false); setFb('fb-inv','fb-warn','⚠️ JÁ BIPADO', id + ' já está no inventário'); return;
+  }
+  writeData(`inventarios/${CUR_DIA}/${emg}/${key}`, { t: Date.now(), op });
+  beep(true); setFb('fb-inv','fb-ok','✅ ADICIONADO', id + ' · ' + op);
+  renderInvTotal(); renderInvList();
+}
+function renderInvList() {
+  const host = document.getElementById('log-inv');
+  const items = invEmg() ? invItems() : {};
+  const arr = Object.entries(items).sort((a,b) => entryTs(b[1])-entryTs(a[1]));
+  if (!arr.length) { host.innerHTML = ''; return; }
+  host.innerHTML = `<h2 style="font-size:14px;margin:8px 0 8px">IDs bipados (${arr.length}) <span class="route-note">— ✏️ corrige, 🗑️ remove</span></h2>
+    <table><tbody>` + arr.map(([k,v]) => `<tr>
+      <td class="mono">${esc(k)}</td>
+      <td>${entryOp(v)?`<span class="route-note">👤 ${esc(entryOp(v))}</span>`:''}</td>
+      <td class="mono" style="color:var(--text3)">${new Date(entryTs(v)).toLocaleTimeString('pt-BR')}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn sm ghost" onclick="editInvId('${esc(k)}')">✏️</button>
+        <button class="btn sm red" onclick="delInvId('${esc(k)}')">🗑️</button>
+      </td></tr>`).join('') + '</tbody></table>';
+}
+function editInvId(oldKey) {
+  const emg = invEmg(), items = invItems();
+  const novo = prompt('Corrigir ID do inventário:', oldKey);
+  if (novo === null) return;
+  const nk = fbKey(normId(novo));
+  if (!nk) return toast('ID inválido');
+  if (nk === oldKey) return;
+  if (items[nk] !== undefined) return toast('Esse ID já está no inventário');
+  const old = items[oldKey];
+  writeData(`inventarios/${CUR_DIA}/${emg}/${nk}`, old !== undefined ? old : { t: Date.now(), op: opInv() });
+  writeData(`inventarios/${CUR_DIA}/${emg}/${oldKey}`, null);
+  toast(`Corrigido: ${oldKey} → ${nk}`);
+  renderInvTotal(); renderInvList();
+}
+function delInvId(key) {
+  const emg = invEmg();
+  if (!confirm('Remover o ID ' + key + ' do inventário?')) return;
+  writeData(`inventarios/${CUR_DIA}/${emg}/${key}`, null);
+  toast('ID removido');
+  renderInvTotal(); renderInvList();
+}
+// SMG15 — análise consolidada do inventário do dia
+function renderInvSMG() {
+  document.getElementById('sel-invsmg').classList.remove('none');
+  document.getElementById('invsmg-dia').textContent = diaLabel(CUR_DIA);
+  const dia = (STATE.inventarios||{})[CUR_DIA] || {};
+  const body = document.getElementById('invsmg-body');
+  let total = 0; const porEmg = []; const all = [];
+  const emgs = [...ORIGENS, ...Object.keys(dia).filter(o => !ORIGENS.includes(o))];
+  emgs.forEach(o => {
+    const items = dia[o] || {}; const ks = Object.keys(items);
+    if (!ks.length) return;
+    total += ks.length; porEmg.push({ emg:o, n:ks.length });
+    ks.forEach(k => all.push({ emg:o, id:k, op:entryOp(items[k]), t:entryTs(items[k]) }));
+  });
+  if (!total) { body.innerHTML = '<div class="card"><div class="empty">Nenhum inventário registrado em '+diaLabel(CUR_DIA)+'.</div></div>'; return; }
+  all.sort((a,b) => a.emg === b.emg ? a.id.localeCompare(b.id) : a.emg.localeCompare(b.emg));
+  body.innerHTML = `
+    <div class="card">
+      <h2>Totais do inventário · ${diaLabel(CUR_DIA)}</h2>
+      <div class="stat-grid">
+        <div class="stat big"><div class="n">${total}</div><div class="l">Total de IDs</div></div>
+        ${porEmg.map(r => `<div class="stat"><div class="n">${r.n}</div><div class="l">${esc(r.emg)}</div></div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <h2>IDs do inventário (${all.length})</h2>
+      <table><thead><tr><th>EMG</th><th>ID</th><th>Operador</th><th>Hora</th></tr></thead><tbody>`+
+      all.map(it => `<tr>
+        <td><span class="tag org">${esc(it.emg)}</span></td>
+        <td class="mono">${esc(it.id)}</td>
+        <td>${it.op?esc(it.op):''}</td>
+        <td class="mono" style="color:var(--text3)">${it.t?new Date(it.t).toLocaleTimeString('pt-BR'):''}</td>
+      </tr>`).join('') + `</tbody></table>
+    </div>`;
+}
+function exportInv() {
+  const dia = (STATE.inventarios||{})[CUR_DIA] || {};
+  const rows = [['dia','emg','id','operador','hora']];
+  let n = 0;
+  Object.keys(dia).forEach(emg => {
+    const items = dia[emg] || {};
+    Object.keys(items).sort().forEach(id => {
+      const v = items[id], t = entryTs(v);
+      rows.push([CUR_DIA, emg, id, entryOp(v), t ? new Date(t).toLocaleString('pt-BR') : '']);
+      n++;
+    });
+  });
+  if (!n) return toast('Nada pra exportar neste dia');
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `inventario_${CUR_DIA}.csv`;
+  a.click();
+  toast(n + ' IDs do inventário exportados');
+}
+
+/* ============================================================
    RENDER GERAL (reage a mudanças do Firebase)
    ============================================================ */
 function renderAll() { renderSection(); }
 
 document.getElementById('op-exp').value = localStorage.getItem('dv_op_exp') || '';
 document.getElementById('op-rec').value = localStorage.getItem('dv_op_rec') || '';
+document.getElementById('op-inv').value = localStorage.getItem('dv_op_inv') || '';
 setDia(CUR_DIA);
 setLoc('EMG23');
 setSection('expedir');
